@@ -13,8 +13,10 @@ import {
   Calendar,
 } from "lucide-react";
 import { api, Farm, Field, Crop } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 
 export default function FarmManagementPage() {
+  const { activeFarmId, setActiveFarmId, refreshFarms } = useFarm();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [fields, setFields] = useState<Field[]>([]);
   const [crops, setCrops] = useState<Crop[]>([]);
@@ -73,6 +75,7 @@ export default function FarmManagementPage() {
 
   async function handleSelectFarm(farm: Farm) {
     setSelectedFarm(farm);
+    setActiveFarmId(farm.id);
     try {
       const fieldList = await api.getFields(farm.id);
       setFields(fieldList);

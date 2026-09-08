@@ -1,14 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { usePathname } from "next/navigation";
-import { api, Farm } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 import { Menu, MapPin } from "lucide-react";
 
 interface NavbarProps {
   onToggleMobile?: () => void;
-  activeFarmId?: number;
-  onFarmChange?: (farmId: number) => void;
 }
 
 const ROUTE_TITLES: Record<string, { title: string; desc: string }> = {
@@ -62,36 +60,14 @@ const ROUTE_TITLES: Record<string, { title: string; desc: string }> = {
   },
 };
 
-export function Navbar({ onToggleMobile, activeFarmId, onFarmChange }: NavbarProps) {
+export function Navbar({ onToggleMobile }: NavbarProps) {
   const pathname = usePathname();
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const { farms, activeFarm, activeFarmId, setActiveFarmId } = useFarm();
 
   const routeInfo = ROUTE_TITLES[pathname] || {
     title: "Agricultural Intelligence",
     desc: "Precision agronomy workspace.",
   };
-
-  useEffect(() => {
-    async function loadFarms() {
-      try {
-        const farmList = await api.getFarms();
-        setFarms(farmList);
-        if (farmList.length > 0) {
-          const current = activeFarmId
-            ? farmList.find((f) => f.id === activeFarmId) || farmList[0]
-            : farmList[0];
-          setSelectedFarm(current);
-          if (onFarmChange && !activeFarmId) {
-            onFarmChange(current.id);
-          }
-        }
-      } catch (err) {
-        console.warn("Notice: Using default farm selection context");
-      }
-    }
-    loadFarms();
-  }, [activeFarmId]);
 
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20">
@@ -116,26 +92,19 @@ export function Navbar({ onToggleMobile, activeFarmId, onFarmChange }: NavbarPro
         </div>
       </div>
 
-      {/* Right: Farm Selector + User Profile */}
+      {/* Right: Farm Selector Options + User Profile */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Farm Selector */}
+        {/* Farm Selector Dropdown Options */}
         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
           <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
           <select
-            value={selectedFarm?.id || ""}
-            onChange={(e) => {
-              const id = Number(e.target.value);
-              const found = farms.find((f) => f.id === id);
-              if (found) {
-                setSelectedFarm(found);
-                if (onFarmChange) onFarmChange(id);
-              }
-            }}
+            value={activeFarmId || ""}
+            onChange={(e) => setActiveFarmId(Number(e.target.value))}
             className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer text-xs pr-1"
             aria-label="Select active farm"
           >
             {farms.length === 0 ? (
-              <option value="">Green Valley Station (120 ha)</option>
+              <option value="1">Green Valley Station (120 ha)</option>
             ) : (
               farms.map((f) => (
                 <option key={f.id} value={f.id}>

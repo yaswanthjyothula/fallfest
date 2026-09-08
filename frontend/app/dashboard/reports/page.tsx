@@ -1,17 +1,39 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileCheck2, Download, ShieldCheck, Sparkles, AlertCircle, FileText } from "lucide-react";
+import {
+  FileCheck2,
+  Download,
+  ShieldCheck,
+  Sparkles,
+  AlertCircle,
+  FileText,
+  Check,
+  Layers,
+  MapPin,
+} from "lucide-react";
 import { api, API_BASE_URL } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 
 export default function ReportsPage() {
+  const { farms, activeFarmId, setActiveFarmId, activeFarm } = useFarm();
+  const [cropType, setCropType] = useState<string>("Winter Wheat (Triticum aestivum)");
   const [generating, setGenerating] = useState(false);
   const [reportResult, setReportResult] = useState<any>(null);
+
+  // Section inclusion check options (checkboxes)
+  const [incSummary, setIncSummary] = useState(true);
+  const [incYield, setIncYield] = useState(true);
+  const [incSatellite, setIncSatellite] = useState(true);
+  const [incWeather, setIncWeather] = useState(true);
+  const [incNutrients, setIncNutrients] = useState(true);
+  const [incKernelMatrix, setIncKernelMatrix] = useState(false);
+  const [incSha256, setIncSha256] = useState(true);
 
   async function handleGenerateReport() {
     setGenerating(true);
     try {
-      const res = await api.generateReport(1, "Winter Wheat (Triticum aestivum)");
+      const res = await api.generateReport(activeFarmId || 1, cropType);
       setReportResult(res);
     } catch (err) {
       console.warn("Report generation notice:", err);
@@ -33,7 +55,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Generator Card */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2">
             <FileCheck2 className="w-5 h-5 text-purple-700" />
@@ -44,9 +66,109 @@ export default function ReportsPage() {
           </span>
         </div>
 
-        <p className="text-xs text-slate-500 leading-relaxed">
-          The certified audit certificate compiles comprehensive farm telemetry, 4-qubit Hilbert quantum projections, Sentinel-2 vegetation canopy readings, precision nutrient application guidelines, and legal agronomic disclaimers into an official compliance document.
-        </p>
+        {/* Farm & Crop Option Dropdowns */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1">
+            <label className="font-semibold text-slate-700">Target Holding</label>
+            <select
+              value={activeFarmId || 1}
+              onChange={(e) => setActiveFarmId(Number(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 cursor-pointer font-medium text-slate-800"
+            >
+              {farms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.total_area_hectares} ha)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="font-semibold text-slate-700">Crop Cultivar</label>
+            <select
+              value={cropType}
+              onChange={(e) => setCropType(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 cursor-pointer font-medium text-slate-800"
+            >
+              <option value="Winter Wheat (Triticum aestivum)">Winter Wheat (Triticum aestivum)</option>
+              <option value="Hybrid Maize (Zea mays Pioneer P3501)">Hybrid Maize (Zea mays)</option>
+              <option value="Basmati Rice (Oryza sativa Pusa-1121)">Basmati Rice (Oryza sativa)</option>
+              <option value="Soybean (Glycine max JS-335)">Soybean (Glycine max)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Report Section Inclusion Check Options */}
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5 text-xs">
+          <span className="font-semibold text-slate-900 block text-[11px] uppercase tracking-wider">
+            Certificate Section Inclusions (Check Options)
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incSummary}
+                onChange={(e) => setIncSummary(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Executive Farm Summary</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incYield}
+                onChange={(e) => setIncYield(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Quantum Yield Forecast (QSVR)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incSatellite}
+                onChange={(e) => setIncSatellite(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Sentinel-2 NDVI Canopy Vigor</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incWeather}
+                onChange={(e) => setIncWeather(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Visual Crossing Weather Analysis</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incNutrients}
+                onChange={(e) => setIncNutrients(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Liebig Nutrient Recommendations</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incKernelMatrix}
+                onChange={(e) => setIncKernelMatrix(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Raw Hilbert Quantum Matrix</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={incSha256}
+                onChange={(e) => setIncSha256(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-purple-700 focus:ring-purple-600 accent-purple-700 cursor-pointer"
+              />
+              <span>Cryptographic SHA-256 Seal</span>
+            </label>
+          </div>
+        </div>
 
         <div className="pt-2">
           <button
@@ -92,7 +214,7 @@ export default function ReportsPage() {
                 className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs px-3 py-1.5 rounded-lg transition-colors shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Export Report</span>
+                <span>Export Report (PDF)</span>
               </a>
             </div>
           </div>

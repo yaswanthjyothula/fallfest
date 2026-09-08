@@ -18,33 +18,25 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { api, Farm, WeatherCurrent, YieldPredictionOutput } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 
 export default function FarmOverviewPage() {
-  const [farms, setFarms] = useState<Farm[]>([]);
-  const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
+  const { activeFarm, farms, activeFarmId, setActiveFarmId } = useFarm();
   const [weather, setWeather] = useState<WeatherCurrent | null>(null);
   const [recentPredictions, setRecentPredictions] = useState<YieldPredictionOutput[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
 
   async function loadOverviewData(force = false) {
+    if (!activeFarm) return;
     try {
       setLoading(true);
       setErrorNotice(null);
-      
-      // Stage 1: Load Farms & Identity
-      const farmList = await api.getFarms(force);
-      setFarms(farmList);
-      
-      const currentFarm = farmList.length > 0 ? farmList[0] : null;
-      setSelectedFarm(currentFarm);
 
-      // Stage 2: Progressively fetch weather & predictions without blocking
-      if (currentFarm) {
-        api.getCurrentWeather(currentFarm.latitude, currentFarm.longitude, force)
-          .then((w) => setWeather(w))
-          .catch((e) => console.warn("Notice: Weather loaded with cached parameters"));
-      }
+      // Fetch weather for the active farm's coordinates
+      api.getCurrentWeather(activeFarm.latitude, activeFarm.longitude, force)
+        .then((w) => setWeather(w))
+        .catch((e) => console.warn("Notice: Weather loaded with cached parameters"));
 
       api.getPredictionHistory(5, force)
         .then((preds) => setRecentPredictions(preds))
@@ -60,7 +52,7 @@ export default function FarmOverviewPage() {
 
   useEffect(() => {
     loadOverviewData();
-  }, []);
+  }, [activeFarm?.id]);
 
   return (
     <div className="space-y-6">
@@ -85,22 +77,35 @@ export default function FarmOverviewPage() {
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
                 Active Farm Context
               </span>
               <span className="text-xs text-slate-400">•</span>
               <span className="text-xs text-slate-500 font-medium">Kharif / Rabi 2026 Season</span>
+              <span className="text-xs text-slate-400">•</span>
+              <select
+                value={activeFarmId || 1}
+                onChange={(e) => setActiveFarmId(Number(e.target.value))}
+                className="text-xs font-semibold text-emerald-900 bg-emerald-50/80 border border-emerald-300/80 rounded-md px-2 py-0.5 focus:outline-emerald-600 cursor-pointer"
+                aria-label="Switch active farm"
+              >
+                {farms.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name} ({f.total_area_hectares} ha)
+                  </option>
+                ))}
+              </select>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              {selectedFarm ? selectedFarm.name : "Green Valley Agricultural Station"}
+              {activeFarm ? activeFarm.name : "Green Valley Agricultural Station"}
             </h2>
             <p className="text-xs text-slate-500 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{selectedFarm?.location || "Krishna Basin Zone 4B, Andhra Pradesh, India"}</span>
+              <span>{activeFarm?.location || "Krishna Basin Zone 4B, Andhra Pradesh, India"}</span>
               <span className="text-slate-300">•</span>
               <span className="font-mono text-[11px] text-slate-600">
-                {selectedFarm ? `${selectedFarm.latitude.toFixed(4)}° N, ${selectedFarm.longitude.toFixed(4)}° E` : "16.5062° N, 80.6480° E"}
+                {activeFarm ? `${activeFarm.latitude.toFixed(4)}° N, ${activeFarm.longitude.toFixed(4)}° E` : "16.5062° N, 80.6480° E"}
               </span>
             </p>
           </div>
@@ -137,9 +142,11 @@ export default function FarmOverviewPage() {
           <div>
             <span className="text-slate-400 block text-[10px] uppercase font-semibold">Cultivated Area</span>
             <span className="font-semibold text-slate-800">
-              {selectedFarm?.total_area_hectares || 120} Hectares
+              {activeFarm?.total_area_hectares || 120} Hectares
             </span>
-            <span className="text-slate-500 block text-[11px]">300 Acres registered</span>
+            <span className="text-slate-500 block text-[11px]">
+              {Math.round((activeFarm?.total_area_hectares || 120) * 2.47105)} Acres registered
+            </span>
           </div>
           <div>
             <span className="text-slate-400 block text-[10px] uppercase font-semibold">Soil Profile</span>

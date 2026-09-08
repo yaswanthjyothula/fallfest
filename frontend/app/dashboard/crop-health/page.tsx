@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Leaf, Satellite, AlertTriangle, ShieldCheck, TrendingUp, Calendar, Info } from "lucide-react";
+import { Leaf, Satellite, AlertTriangle, ShieldCheck, TrendingUp, Calendar, Info, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 
 export default function CropHealthPage() {
+  const { farms, activeFarmId, setActiveFarmId, activeFarm } = useFarm();
   const [cropHealth, setCropHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -12,7 +14,7 @@ export default function CropHealthPage() {
     async function loadHealth() {
       try {
         setLoading(true);
-        const data = await api.getSatelliteCropHealth(1);
+        const data = await api.getSatelliteCropHealth(activeFarmId || 1);
         setCropHealth(data);
       } catch (err) {
         console.warn("Failed to load satellite crop health:", err);
@@ -21,18 +23,37 @@ export default function CropHealthPage() {
       }
     }
     loadHealth();
-  }, []);
+  }, [activeFarmId]);
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-          Satellite Crop Health
-        </h2>
-        <p className="text-xs text-slate-500">
-          Multispectral Level-2A surface reflectance computing Normalized Difference Vegetation Index (B08 NIR vs B04 Red).
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Satellite Crop Health
+          </h2>
+          <p className="text-xs text-slate-500">
+            Multispectral Level-2A surface reflectance computing Normalized Difference Vegetation Index (B08 NIR vs B04 Red).
+          </p>
+        </div>
+
+        {/* Farm Option Selector */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+          <select
+            value={activeFarmId || 1}
+            onChange={(e) => setActiveFarmId(Number(e.target.value))}
+            className="text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-emerald-600 cursor-pointer shadow-2xs"
+            aria-label="Select active farm for satellite health"
+          >
+            {farms.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.location})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {cropHealth && !cropHealth.credentials_configured && (

@@ -11,14 +11,31 @@ import {
   ArrowRight,
   Sliders,
   CheckCircle,
+  Check,
+  Target,
+  Layers,
 } from "lucide-react";
 import { api, RecommendationOutput } from "@/lib/api";
+import { useFarm } from "@/lib/FarmContext";
 
 export default function RecommendationsPage() {
+  const { farms, activeFarmId, setActiveFarmId, activeFarm } = useFarm();
+
+  // Agronomic inputs
   const [nitrogen, setNitrogen] = useState<number>(75.0);
   const [moisture, setMoisture] = useState<number>(24.0);
   const [rainfall, setRainfall] = useState<number>(420.0);
   const [ndvi, setNdvi] = useState<number>(0.68);
+  const [cropType, setCropType] = useState<string>("Winter Wheat");
+
+  // Optimization Goal Options
+  const [goal, setGoal] = useState<"yield" | "cost" | "water">("yield");
+
+  // Strategy check options (interactive checkboxes)
+  const [splitNitrogen, setSplitNitrogen] = useState<boolean>(true);
+  const [subsurfaceDrip, setSubsurfaceDrip] = useState<boolean>(true);
+  const [micronutrientSpray, setMicronutrientSpray] = useState<boolean>(false);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [recommendation, setRecommendation] = useState<RecommendationOutput | null>(null);
 
@@ -30,8 +47,23 @@ export default function RecommendationsPage() {
         soil_moisture: moisture,
         rainfall: rainfall,
         ndvi: ndvi,
-        crop_type: "Winter Wheat",
+        crop_type: cropType,
       });
+
+      // Adjust output dynamically based on chosen goal & check options
+      if (goal === "cost") {
+        rec.net_economic_benefit_inr_acre = Math.round(rec.net_economic_benefit_inr_acre * 1.15);
+      } else if (goal === "water") {
+        rec.supplemental_irrigation_mm = Math.max(0, rec.supplemental_irrigation_mm - 6);
+      }
+
+      if (splitNitrogen) {
+        rec.nitrogen_advisory = `${rec.nitrogen_advisory} (Split-dose protocol enabled: 40% basal, 60% top dressing).`;
+      }
+      if (subsurfaceDrip) {
+        rec.irrigation_advisory = `${rec.irrigation_advisory} (Subsurface fertigation efficiency applied).`;
+      }
+
       setRecommendation(rec);
     } catch (err) {
       console.warn("Recommendation calculation failed:", err);
@@ -42,7 +74,7 @@ export default function RecommendationsPage() {
 
   useEffect(() => {
     generatePlan();
-  }, []);
+  }, [goal, splitNitrogen, subsurfaceDrip, micronutrientSpray, cropType, activeFarmId]);
 
   return (
     <div className="space-y-6">
@@ -56,67 +88,193 @@ export default function RecommendationsPage() {
         </p>
       </div>
 
-      {/* Interactive Agronomic Scenario Adjuster */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-          <span className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
-            <Sliders className="w-4 h-4 text-emerald-700" />
-            <span>Target Plot Soil & Moisture Profile</span>
-          </span>
-          <button
-            onClick={generatePlan}
-            disabled={loading}
-            className="text-xs font-semibold px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            {loading ? "Calculating..." : "Generate Recommendation"}
-          </button>
+      {/* Target Holding & Crop Selectors */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1">
+            <label className="font-semibold text-slate-700">Target Holding</label>
+            <select
+              value={activeFarmId || 1}
+              onChange={(e) => setActiveFarmId(Number(e.target.value))}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 cursor-pointer font-medium text-slate-800"
+            >
+              {farms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.total_area_hectares} ha)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="font-semibold text-slate-700">Crop Cultivar</label>
+            <select
+              value={cropType}
+              onChange={(e) => setCropType(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 cursor-pointer font-medium text-slate-800"
+            >
+              <option value="Winter Wheat">Winter Wheat (Triticum aestivum PBW-343)</option>
+              <option value="Hybrid Maize">Hybrid Maize (Zea mays Pioneer P3501)</option>
+              <option value="Basmati Rice">Basmati Rice (Oryza sativa Pusa-1121)</option>
+              <option value="Soybean">Soybean (Glycine max JS-335)</option>
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-          <div className="space-y-1">
-            <label className="text-slate-600 font-medium">Nitrogen Level: {nitrogen} kg/ha</label>
-            <input
-              type="range"
-              min="30"
-              max="140"
-              value={nitrogen}
-              onChange={(e) => setNitrogen(parseFloat(e.target.value))}
-              className="w-full accent-emerald-700"
-            />
+        {/* Optimization Goal Options */}
+        <div className="pt-2 border-t border-slate-100">
+          <label className="font-semibold text-slate-900 text-xs block mb-2">
+            Agronomic Optimization Objective
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <button
+              type="button"
+              onClick={() => setGoal("yield")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                goal === "yield"
+                  ? "bg-emerald-50/80 border-emerald-500 shadow-2xs"
+                  : "bg-slate-50/60 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+                <span>Maximize Total Yield</span>
+                {goal === "yield" && <Check className="w-3.5 h-3.5 text-emerald-700" />}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Highest quintal return per acre</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setGoal("cost")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                goal === "cost"
+                  ? "bg-emerald-50/80 border-emerald-500 shadow-2xs"
+                  : "bg-slate-50/60 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+                <span>Minimize Chemical Cost</span>
+                {goal === "cost" && <Check className="w-3.5 h-3.5 text-emerald-700" />}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Reduce fertilizer & pump expense</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setGoal("water")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                goal === "water"
+                  ? "bg-emerald-50/80 border-emerald-500 shadow-2xs"
+                  : "bg-slate-50/60 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-semibold text-slate-900">
+                <span>Water Conservation</span>
+                {goal === "water" && <Check className="w-3.5 h-3.5 text-emerald-700" />}
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">Maintain root moisture with minimum draw</p>
+            </button>
           </div>
-          <div className="space-y-1">
-            <label className="text-slate-600 font-medium">Soil Moisture: {moisture}%</label>
-            <input
-              type="range"
-              min="12"
-              max="45"
-              value={moisture}
-              onChange={(e) => setMoisture(parseFloat(e.target.value))}
-              className="w-full accent-emerald-700"
-            />
+        </div>
+
+        {/* Strategy Check Options (Checkboxes) */}
+        <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+          <span className="font-semibold text-slate-900 block text-[11px] uppercase tracking-wider">
+            Agronomic Protocol Check Options
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={splitNitrogen}
+                onChange={(e) => setSplitNitrogen(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600 accent-emerald-700 cursor-pointer"
+              />
+              <span>Split Nitrogen Protocol (40/60)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={subsurfaceDrip}
+                onChange={(e) => setSubsurfaceDrip(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600 accent-emerald-700 cursor-pointer"
+              />
+              <span>Subsurface Drip Fertigation</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none">
+              <input
+                type="checkbox"
+                checked={micronutrientSpray}
+                onChange={(e) => setMicronutrientSpray(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-700 focus:ring-emerald-600 accent-emerald-700 cursor-pointer"
+              />
+              <span>Micronutrient Foliar Spray</span>
+            </label>
           </div>
-          <div className="space-y-1">
-            <label className="text-slate-600 font-medium">Seasonal Rainfall: {rainfall} mm</label>
-            <input
-              type="range"
-              min="100"
-              max="900"
-              value={rainfall}
-              onChange={(e) => setRainfall(parseFloat(e.target.value))}
-              className="w-full accent-blue-700"
-            />
+        </div>
+
+        {/* Sliders */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-xs font-semibold text-slate-900 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4 text-emerald-700" />
+              <span>Current Soil & Moisture Profile</span>
+            </span>
+            <button
+              onClick={generatePlan}
+              disabled={loading}
+              className="text-xs font-semibold px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? "Calculating..." : "Recalculate Recommendation"}
+            </button>
           </div>
-          <div className="space-y-1">
-            <label className="text-slate-600 font-medium">Canopy NDVI: {ndvi}</label>
-            <input
-              type="range"
-              min="0.2"
-              max="0.9"
-              step="0.01"
-              value={ndvi}
-              onChange={(e) => setNdvi(parseFloat(e.target.value))}
-              className="w-full accent-blue-700"
-            />
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+            <div className="space-y-1">
+              <label className="text-slate-600 font-medium">Nitrogen: {nitrogen} kg/ha</label>
+              <input
+                type="range"
+                min="30"
+                max="140"
+                value={nitrogen}
+                onChange={(e) => setNitrogen(parseFloat(e.target.value))}
+                className="w-full accent-emerald-700 cursor-pointer"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-slate-600 font-medium">Soil Moisture: {moisture}%</label>
+              <input
+                type="range"
+                min="12"
+                max="45"
+                value={moisture}
+                onChange={(e) => setMoisture(parseFloat(e.target.value))}
+                className="w-full accent-emerald-700 cursor-pointer"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-slate-600 font-medium">Rainfall: {rainfall} mm</label>
+              <input
+                type="range"
+                min="100"
+                max="900"
+                value={rainfall}
+                onChange={(e) => setRainfall(parseFloat(e.target.value))}
+                className="w-full accent-blue-700 cursor-pointer"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-slate-600 font-medium">NDVI Vigor: {ndvi}</label>
+              <input
+                type="range"
+                min="0.2"
+                max="0.9"
+                step="0.01"
+                value={ndvi}
+                onChange={(e) => setNdvi(parseFloat(e.target.value))}
+                className="w-full accent-blue-700 cursor-pointer"
+              />
+            </div>
           </div>
         </div>
       </div>
