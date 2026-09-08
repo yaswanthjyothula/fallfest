@@ -34,6 +34,7 @@ from core.recommender import PrecisionAgronomyRecommender
 from backend.database import init_db, SessionLocal
 from backend import models
 from backend.services.weather_service import get_farm_weather_sync
+from backend.services.satellite_service import CopernicusSentinelService
 from backend.services.report_service import generate_certified_pdf, generate_report_text
 from backend.services.supabase_service import get_supabase_status, sync_prediction_to_supabase
 
@@ -1892,7 +1893,10 @@ elif st.session_state.app_view == "dashboard":
                     unsafe_allow_html=True,
                 )
 
-                K_eval = engine.evaluate_kernel(data_dict["X_test_quantum"][:25], data_dict["X_test_quantum"][:25])
+                try:
+                    K_eval = engine.evaluate_kernel(data_dict["X_test_quantum"][:25], data_dict["X_test_quantum"][:25])
+                except AttributeError:
+                    K_eval = engine.compute_gram_matrix(data_dict["X_test_quantum"][:25], data_dict["X_test_quantum"][:25])
                 fig_gram = px.imshow(
                     K_eval,
                     color_continuous_scale=[[0, "#FFFFFF"], [0.5, "#A7F3D0"], [1.0, "#075B35"]],
@@ -2033,6 +2037,41 @@ elif st.session_state.app_view == "dashboard":
                 <div class="panel-header-title">Crop Health</div>
                 <div class="panel-header-desc">
                     Sentinel-2 Multispectral vegetative health monitoring across field management zones.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Live Sentinel-2 Satellite Telemetry Strip
+        sat_svc = CopernicusSentinelService()
+        sat_data = sat_svc.get_field_canopy_intelligence_sync(1, "Plot Alpha-1 (Wheat Monitored)")
+        sat_status_col = "#138A4B" if sat_data.get("credentials_configured") else "#6B7280"
+
+        st.markdown(
+            f"""
+            <div class="content-panel" style="background:#F4FAF6; border:1px solid #C2E7D1; margin-bottom:1rem; padding:0.85rem 1rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; color:#075B35; letter-spacing:0.04em;">
+                            Satellite Ingestion Pipeline
+                        </div>
+                        <div style="font-size:0.95rem; font-weight:700; color:#111827; margin-top:0.15rem;">
+                            {sat_data.get('satellite_mission', 'Sentinel-2 L2A')} • {sat_data.get('auth_provider', 'Process API')}
+                        </div>
+                        <div style="font-size:0.75rem; color:#4B5563; margin-top:0.2rem;">
+                            {sat_data.get('configuration_guide', '')}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.78rem; font-weight:700; color:{sat_status_col}; background:#FFFFFF; border:1px solid #C2E7D1; padding:0.25rem 0.65rem; border-radius:9999px;">
+                            <span style="width:6px; height:6px; background-color:{sat_status_col}; border-radius:50%; display:inline-block;"></span>
+                            {sat_data.get('status_message', 'Active')}
+                        </div>
+                        <div style="font-size:0.72rem; color:#6B7280; margin-top:0.3rem;">
+                            Cloud Cover: <strong>{sat_data.get('cloud_coverage_pct', 0.0)}%</strong> • Mean NDVI: <strong>{sat_data.get('mean_ndvi', 0.82)}</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
             """,

@@ -151,6 +151,18 @@ class AgriQuantumEngine:
 
         return np.asarray(K, dtype=np.float64)
 
+    def evaluate_kernel(
+        self,
+        X1: np.ndarray,
+        X2: Optional[np.ndarray] = None,
+    ) -> np.ndarray:
+        """
+        Evaluates the Quantum Kernel Gram Matrix:
+        K(x_i, x_j) = |⟨Φ(x_i)|Φ(x_j)⟩|²
+        Alias for compute_gram_matrix for API compatibility.
+        """
+        return self.compute_gram_matrix(X1, X2)
+
     def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> "AgriQuantumEngine":
         """
         Fits QSVR on the training data.
