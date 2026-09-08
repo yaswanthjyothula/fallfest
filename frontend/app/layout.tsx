@@ -21,6 +21,8 @@ export const metadata: Metadata = {
     "Enterprise precision agronomy, quantum ML crop yield prediction, Copernicus satellite NDVI telemetry, and certified audit reporting.",
 };
 
+import { Providers } from "@/components/Providers";
+
 export default function RootLayout({
   children,
 }: {
@@ -32,9 +34,10 @@ export default function RootLayout({
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans bg-slate-50 text-slate-900 selection:bg-emerald-100 selection:text-emerald-900">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
+
 

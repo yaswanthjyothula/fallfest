@@ -5,7 +5,6 @@ import { Sidebar } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FarmProvider } from "@/lib/FarmContext";
-import AssistantModal from "@/components/AssistantModal";
 
 export default function DashboardLayout({
   children,
@@ -29,8 +28,8 @@ export default function DashboardLayout({
             </ErrorBoundary>
           </main>
         </div>
-        <AssistantModal />
       </div>
     </FarmProvider>
   );
 }
+

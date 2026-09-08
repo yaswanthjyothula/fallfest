@@ -22,7 +22,34 @@ class TestDecisionIntelligence(unittest.TestCase):
     def setUpClass(cls):
         cls.client = TestClient(app)
 
+    def test_authentication_endpoints(self):
+        # 1. Successful authentication with test@gmail.com / test123
+        login_res = self.client.post("/api/v1/auth/login", json={"email": "test@gmail.com", "password": "test123"})
+        self.assertEqual(login_res.status_code, 200)
+        token_data = login_res.json()
+        self.assertIn("access_token", token_data)
+        self.assertEqual(token_data["token_type"], "bearer")
+        self.assertIn("Farmer", token_data.get("full_name", ""))
+
+        # 2. Authenticated profile lookup using Bearer token
+        token = token_data["access_token"]
+        me_res = self.client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+        self.assertEqual(me_res.status_code, 200)
+        profile = me_res.json()
+        self.assertEqual(profile["email"], "test@gmail.com")
+
+        # 3. Invalid credentials handling (returns 401, not 500)
+        bad_login = self.client.post("/api/v1/auth/login", json={"email": "test@gmail.com", "password": "wrongpassword"})
+        self.assertEqual(bad_login.status_code, 401)
+        self.assertIn("Invalid", bad_login.json()["detail"])
+
+        # 4. Password reset request
+        reset_res = self.client.post("/api/v1/auth/reset-password", json={"email": "test@gmail.com"})
+        self.assertEqual(reset_res.status_code, 200)
+        self.assertEqual(reset_res.json()["status"], "success")
+
     def test_what_if_simulation_scenarios(self):
+
         payload = {
             "crop_type": "Winter Wheat",
             "cultivated_area_hectares": 120.0,

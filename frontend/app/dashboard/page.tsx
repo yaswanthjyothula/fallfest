@@ -18,16 +18,21 @@ import {
   Calendar,
   AlertCircle,
   RefreshCw,
+  Navigation,
 } from "lucide-react";
 import { api, Farm, WeatherCurrent, YieldPredictionOutput } from "@/lib/api";
 import { useFarm } from "@/lib/FarmContext";
+import { useAuth } from "@/lib/AuthContext";
+import { LocationModal } from "@/components/LocationModal";
 
 export default function FarmOverviewPage() {
   const { activeFarm, farms, activeFarmId, setActiveFarmId } = useFarm();
+  const { user, location } = useAuth();
   const [weather, setWeather] = useState<WeatherCurrent | null>(null);
   const [recentPredictions, setRecentPredictions] = useState<YieldPredictionOutput[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorNotice, setErrorNotice] = useState<string | null>(null);
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
 
   async function loadOverviewData(force = false) {
     if (!activeFarm) return;
@@ -58,6 +63,34 @@ export default function FarmOverviewPage() {
 
   return (
     <div className="space-y-6">
+      {/* Location-Aware Personalized Context Banner */}
+      <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 text-white p-5 sm:p-6 rounded-2xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-slate-800">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
+              Location-Aware Agricultural Intelligence
+            </span>
+            <span className="text-[10px] font-mono text-slate-400">
+              GPS Calibrated
+            </span>
+          </div>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
+            {user?.fullName ? `Welcome, ${user.fullName}` : "Farm Overview"} — {location.formattedAddress}
+          </h2>
+          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Your field is currently being monitored using weather, satellite, and agricultural data. Local micro-climate conditions and soil telemetry are synchronized.
+          </p>
+        </div>
+
+        <button
+          onClick={() => setLocationModalOpen(true)}
+          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-semibold text-white transition cursor-pointer shrink-0"
+        >
+          <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Update Location</span>
+        </button>
+      </div>
+
       {/* Error / Offline Notice with Retry */}
       {errorNotice && (
         <div className="bg-amber-50 border border-amber-200/80 rounded-xl p-4 flex items-center justify-between gap-4 text-xs text-amber-900 shadow-xs">
@@ -74,6 +107,13 @@ export default function FarmOverviewPage() {
           </button>
         </div>
       )}
+
+      {/* Location Modal */}
+      <LocationModal
+        isOpen={locationModalOpen}
+        onClose={() => setLocationModalOpen(false)}
+      />
+
 
       {/* 1. Farm Context Bar */}
       <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
