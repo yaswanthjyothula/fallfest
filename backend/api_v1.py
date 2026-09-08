@@ -29,6 +29,7 @@ from backend.security import log_audit_event
 from backend.services.weather_service import get_farm_weather
 from backend.services.satellite_service import CopernicusSentinelService
 from backend.services.report_service import generate_certified_pdf, generate_report_text
+from backend.services.supabase_service import get_supabase_status, sync_prediction_to_supabase
 
 from data.generator import get_train_test_agronomic_data, scale_for_quantum
 from core.quantum_engine import AgriQuantumEngine
@@ -223,6 +224,27 @@ def predict_crop_yield(
         db.refresh(pred_record)
 
         log_audit_event("PREDICTION_EXECUTED", "predictions", user_id=user_id, details={"prediction_id": pred_record.id, "yield": pred_q_acre})
+
+        # Sync prediction to Supabase Cloud if available
+        try:
+            sync_prediction_to_supabase({
+                "field_id": pred_record.field_id,
+                "user_id": pred_record.user_id,
+                "input_nitrogen": pred_record.input_nitrogen,
+                "input_phosphorus": pred_record.input_phosphorus,
+                "input_potassium": pred_record.input_potassium,
+                "input_moisture": pred_record.input_moisture,
+                "input_rainfall": pred_record.input_rainfall,
+                "input_temperature": pred_record.input_temperature,
+                "input_ndvi": pred_record.input_ndvi,
+                "crop_type": pred_record.crop_type,
+                "predicted_yield": pred_record.predicted_yield,
+                "unit": pred_record.unit,
+                "confidence_score": pred_record.confidence_score,
+                "status": pred_record.status,
+            })
+        except Exception:
+            pass
 
         return schemas.YieldPredictionOutput(
             prediction_id=pred_record.id,
@@ -522,22 +544,33 @@ def download_report_pdf(report_id: int, db: Session = Depends(get_db)):
 
 
 # ==============================================================================
-# SYSTEM & HEALTH
+# SYSTEM, HEALTH & SUPABASE
 # ==============================================================================
+@router.get("/supabase/status")
+def get_supabase_cloud_status():
+    """Returns connectivity and project metadata for connected Supabase cloud instance."""
+    return get_supabase_status()
+
+
 @router.get("/health")
 def system_health_check(db: Session = Depends(get_db)):
-    """Production health check verifying database and quantum simulator status."""
+    """Production health check verifying database, quantum simulator, and Supabase status."""
     db_status = "Connected"
     try:
         db.execute(models.User.__table__.select().limit(1))
     except Exception as e:
         db_status = f"Degraded: {str(e)}"
 
+    sb_status = get_supabase_status()
+
     return {
         "status": "healthy",
         "platform": "AgriQuantum Precision Agriculture Platform",
         "version": "2.5.0",
         "database": db_status,
+        "supabase": sb_status.get("message", "Not configured"),
+        "supabase_connected": sb_status.get("connected", False),
+        "supabase_project_id": sb_status.get("project_id", ""),
         "quantum_engine": "Ready (Qiskit Aer Statevector)",
         "active_qubits": 4,
         "timestamp": datetime.utcnow().isoformat() + "Z",

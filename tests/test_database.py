@@ -9,10 +9,10 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Use isolated in-memory SQLite for testing
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+test_engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
-from backend.database import Base, SessionLocal, engine, init_db
+from backend.database import Base
 from backend import models
 from backend.auth import get_password_hash, verify_password
 
@@ -20,12 +20,17 @@ from backend.auth import get_password_hash, verify_password
 class TestDatabaseModels(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        Base.metadata.create_all(bind=engine)
+        Base.metadata.create_all(bind=test_engine)
+
+    @classmethod
+    def tearDownClass(cls):
+        Base.metadata.drop_all(bind=test_engine)
 
     def setUp(self):
-        self.db = SessionLocal()
+        self.db = TestingSessionLocal()
 
     def tearDown(self):
+        self.db.rollback()
         self.db.close()
 
     def test_user_creation_and_auth(self):
