@@ -17,6 +17,11 @@ ENV/
 .pytest_cache/
 .coverage
 
+# Database
+*.db
+*.sqlite3
+agriquantum.db
+
 # OS generated
 Thumbs.db
 Desktop.ini

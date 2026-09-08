@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  # ============================================================================
+  # 1. PostgreSQL Relational Database (Optional - defaults to SQLite if omitted)
+  # ============================================================================
+  db:
+    image: postgres:15-alpine
+    container_name: agriquantum_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-agriquantum}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # 2. FastAPI REST Backend Service (/api/v1/)
+  # ============================================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agriquantum_api
+    restart: unless-stopped
+    command: uvicorn backend.api:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_2026}@db:5432/${POSTGRES_DB:-agriquantum}
+      - SECRET_KEY=${SECRET_KEY:-agriquantum_super_secret_production_key_2026}
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=http://localhost:8501,http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ============================================================================
+  # 3. Streamlit Precision Agronomy Dashboard
+  # ============================================================================
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agriquantum_dashboard
+    restart: unless-stopped
+    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_2026}@db:5432/${POSTGRES_DB:-agriquantum}
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
