@@ -100,7 +100,6 @@ The backend exposes interactive Swagger documentation at **`http://localhost:800
   - Headline: **Predict Better. Grow Smarter.**
   - High-resolution aerial agricultural landscape ([`assets/hero_agriculture.jpg`](file:///c:/Users/JASWANTH/Downloads/fallfest/assets/hero_agriculture.jpg)).
   - Subtle floating data chips: Yield Forecast (`38.4 Q/Acre`), NDVI Health (`0.82`), Quantum Model (`Online • 4 Qubits`), Optimization (`₹1,250 / Acre`).
-- **Trust Strip**: Built with Qiskit, Python, Quantum ML, Satellite Analytics, Precision Agriculture.
 - **Problem Section**: 3 intelligence cards (Soil Complexity, Climate Variability, Invisible Crop Signals).
 - **How It Works**: 5-step horizontal timeline from Farm Data to Precision Optimization.
 - **Product Features Bento Grid**: 6 capability cards.

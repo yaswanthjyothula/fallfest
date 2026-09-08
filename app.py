@@ -644,23 +644,6 @@ if st.session_state.app_view == "landing":
 
     st.markdown("<div style='margin-bottom: 3.5rem;'></div>", unsafe_allow_html=True)
 
-    # TRUST STRIP
-    st.markdown(
-        """
-        <div style="background:#FFFFFF; border:1px solid #DFE8E2; border-radius:14px; padding:1.2rem 2.2rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.5rem; margin-bottom:4rem;">
-            <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:#68756E; letter-spacing:0.06em;">Built with</div>
-            <div style="display:flex; gap:2.5rem; align-items:center; flex-wrap:wrap; font-weight:600; font-size:0.92rem; color:#15231B;">
-                <span>⚛️ Qiskit</span>
-                <span>🐍 Python</span>
-                <span>⚡ Quantum Machine Learning</span>
-                <span>🛰️ Satellite Analytics</span>
-                <span>🌾 Precision Agriculture</span>
-                <span>🌲 Machine Learning</span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
     # 6. PROBLEM SECTION
     st.markdown(
