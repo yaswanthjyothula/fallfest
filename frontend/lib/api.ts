@@ -1,6 +1,7 @@
 /**
  * AgriQuantum Centralized Typed API Client
  * Connects Next.js Frontend directly to FastAPI Gateway (/api/v1/)
+ * Featuring client-side memory caching with TTL to eliminate duplicate/sequential request waterfalls.
  */
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/v1";
@@ -140,6 +141,42 @@ export interface BenchmarkModelMetrics {
   kernel_type?: string;
 }
 
+// ---------------------------------------------------------------------------
+// In-Memory Staged Cache System
+// ---------------------------------------------------------------------------
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const memoryCache = new Map<string, CacheEntry<any>>();
+
+function getCached<T>(key: string, ttlMs: number): T | null {
+  const entry = memoryCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > ttlMs) {
+    memoryCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCached<T>(key: string, data: T): void {
+  memoryCache.set(key, { data, timestamp: Date.now() });
+}
+
+export function clearApiCache(prefix?: string): void {
+  if (!prefix) {
+    memoryCache.clear();
+    return;
+  }
+  for (const key of memoryCache.keys()) {
+    if (key.startsWith(prefix)) {
+      memoryCache.delete(key);
+    }
+  }
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let errorDetail = `API Error (${res.status})`;
@@ -156,25 +193,57 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
 export const api = {
   // System & Health
-  async getHealth() {
-    const res = await fetch(`${API_BASE_URL}/health`);
-    return handleResponse<any>(res);
+  async getHealth(forceRefresh = false): Promise<any> {
+    const cacheKey = "health";
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 30_000); // 30 sec TTL
+      if (cached) return cached;
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/health`);
+      const data = await handleResponse<any>(res);
+      setCached(cacheKey, data);
+      return data;
+    } catch (e) {
+      return { status: "degraded", error: String(e) };
+    }
   },
 
-  async getSupabaseStatus() {
+  async getSupabaseStatus(forceRefresh = false): Promise<any> {
+    const cacheKey = "supabase_status";
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 60_000);
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/supabase/status`);
-    return handleResponse<any>(res);
+    const data = await handleResponse<any>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   // Farms
-  async getFarms(): Promise<Farm[]> {
+  async getFarms(forceRefresh = false): Promise<Farm[]> {
+    const cacheKey = "farms_list";
+    if (!forceRefresh) {
+      const cached = getCached<Farm[]>(cacheKey, 120_000); // 2 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/farms`);
-    return handleResponse<Farm[]>(res);
+    const data = await handleResponse<Farm[]>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  async getFarm(id: number): Promise<Farm> {
+  async getFarm(id: number, forceRefresh = false): Promise<Farm> {
+    const cacheKey = `farm_${id}`;
+    if (!forceRefresh) {
+      const cached = getCached<Farm>(cacheKey, 120_000);
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/farms/${id}`);
-    return handleResponse<Farm>(res);
+    const data = await handleResponse<Farm>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async createFarm(payload: Partial<Farm>): Promise<Farm> {
@@ -183,7 +252,9 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<Farm>(res);
+    const data = await handleResponse<Farm>(res);
+    clearApiCache("farm");
+    return data;
   },
 
   async updateFarm(id: number, payload: Partial<Farm>): Promise<Farm> {
@@ -192,19 +263,30 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<Farm>(res);
+    const data = await handleResponse<Farm>(res);
+    clearApiCache("farm");
+    return data;
   },
 
   async deleteFarm(id: number): Promise<{ status: string; message: string }> {
     const res = await fetch(`${API_BASE_URL}/farms/${id}`, { method: "DELETE" });
-    return handleResponse(res);
+    const data = await handleResponse<{ status: string; message: string }>(res);
+    clearApiCache("farm");
+    return data;
   },
 
   // Fields
-  async getFields(farmId?: number): Promise<Field[]> {
+  async getFields(farmId?: number, forceRefresh = false): Promise<Field[]> {
+    const cacheKey = farmId ? `fields_farm_${farmId}` : "fields_all";
+    if (!forceRefresh) {
+      const cached = getCached<Field[]>(cacheKey, 120_000);
+      if (cached) return cached;
+    }
     const url = farmId ? `${API_BASE_URL}/fields?farm_id=${farmId}` : `${API_BASE_URL}/fields`;
     const res = await fetch(url);
-    return handleResponse<Field[]>(res);
+    const data = await handleResponse<Field[]>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async createField(farmId: number, payload: Partial<Field>): Promise<Field> {
@@ -213,7 +295,9 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<Field>(res);
+    const data = await handleResponse<Field>(res);
+    clearApiCache("fields");
+    return data;
   },
 
   async updateField(id: number, payload: Partial<Field>): Promise<Field> {
@@ -222,19 +306,30 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<Field>(res);
+    const data = await handleResponse<Field>(res);
+    clearApiCache("fields");
+    return data;
   },
 
   async deleteField(id: number): Promise<{ status: string; message: string }> {
     const res = await fetch(`${API_BASE_URL}/fields/${id}`, { method: "DELETE" });
-    return handleResponse(res);
+    const data = await handleResponse<{ status: string; message: string }>(res);
+    clearApiCache("fields");
+    return data;
   },
 
   // Crops
-  async getCrops(fieldId?: number): Promise<Crop[]> {
+  async getCrops(fieldId?: number, forceRefresh = false): Promise<Crop[]> {
+    const cacheKey = fieldId ? `crops_field_${fieldId}` : "crops_all";
+    if (!forceRefresh) {
+      const cached = getCached<Crop[]>(cacheKey, 120_000);
+      if (cached) return cached;
+    }
     const url = fieldId ? `${API_BASE_URL}/fields/${fieldId}/crops` : `${API_BASE_URL}/crops`;
     const res = await fetch(url);
-    return handleResponse<Crop[]>(res);
+    const data = await handleResponse<Crop[]>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   async addCrop(fieldId: number, payload: Partial<Crop>): Promise<Crop> {
@@ -243,7 +338,9 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<Crop>(res);
+    const data = await handleResponse<Crop>(res);
+    clearApiCache("crops");
+    return data;
   },
 
   // Prediction
@@ -253,12 +350,21 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    return handleResponse<YieldPredictionOutput>(res);
+    const data = await handleResponse<YieldPredictionOutput>(res);
+    clearApiCache("pred_history");
+    return data;
   },
 
-  async getPredictionHistory(limit: number = 10): Promise<YieldPredictionOutput[]> {
+  async getPredictionHistory(limit: number = 10, forceRefresh = false): Promise<YieldPredictionOutput[]> {
+    const cacheKey = `pred_history_${limit}`;
+    if (!forceRefresh) {
+      const cached = getCached<YieldPredictionOutput[]>(cacheKey, 30_000); // 30 sec TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/predictions/history?limit=${limit}`);
-    return handleResponse<YieldPredictionOutput[]>(res);
+    const data = await handleResponse<YieldPredictionOutput[]>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   // Recommendations
@@ -271,42 +377,91 @@ export const api = {
     return handleResponse<RecommendationOutput>(res);
   },
 
-  // Weather (Visual Crossing)
-  async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherCurrent> {
+  // Weather (Visual Crossing) - 5 min cache
+  async getCurrentWeather(latitude: number, longitude: number, forceRefresh = false): Promise<WeatherCurrent> {
+    const cacheKey = `weather_cur_${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
+    if (!forceRefresh) {
+      const cached = getCached<WeatherCurrent>(cacheKey, 300_000); // 5 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/weather/current?latitude=${latitude}&longitude=${longitude}`);
-    return handleResponse<WeatherCurrent>(res);
+    const data = await handleResponse<WeatherCurrent>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  async getWeatherForecast(latitude: number, longitude: number, days: number = 7): Promise<{ forecast: WeatherForecastDay[] }> {
+  async getWeatherForecast(latitude: number, longitude: number, days: number = 7, forceRefresh = false): Promise<{ forecast: WeatherForecastDay[] }> {
+    const cacheKey = `weather_fc_${latitude.toFixed(3)}_${longitude.toFixed(3)}_${days}`;
+    if (!forceRefresh) {
+      const cached = getCached<{ forecast: WeatherForecastDay[] }>(cacheKey, 600_000); // 10 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/weather/forecast?latitude=${latitude}&longitude=${longitude}&days=${days}`);
-    return handleResponse<{ forecast: WeatherForecastDay[] }>(res);
+    const data = await handleResponse<{ forecast: WeatherForecastDay[] }>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  async getFarmWeather(farmId: number): Promise<any> {
+  async getFarmWeather(farmId: number, forceRefresh = false): Promise<any> {
+    const cacheKey = `weather_farm_${farmId}`;
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 300_000);
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/weather/farm/${farmId}`);
-    return handleResponse<any>(res);
+    const data = await handleResponse<any>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  // Satellite & Crop Health
-  async getSatelliteCropHealth(fieldId: number): Promise<any> {
+  // Satellite & Crop Health - 10 min cache
+  async getSatelliteCropHealth(fieldId: number, forceRefresh = false): Promise<any> {
+    const cacheKey = `sat_crop_${fieldId}`;
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 600_000); // 10 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/satellite/crop-health/${fieldId}`);
-    return handleResponse<any>(res);
+    const data = await handleResponse<any>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  // Benchmarks & Quantum
-  async getBenchmarks(): Promise<Record<string, BenchmarkModelMetrics>> {
+  // Benchmarks & Quantum - 15 min cache
+  async getBenchmarks(forceRefresh = false): Promise<Record<string, BenchmarkModelMetrics>> {
+    const cacheKey = "benchmarks_data";
+    if (!forceRefresh) {
+      const cached = getCached<Record<string, BenchmarkModelMetrics>>(cacheKey, 900_000);
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/models/benchmark`);
-    return handleResponse<Record<string, BenchmarkModelMetrics>>(res);
+    const data = await handleResponse<Record<string, BenchmarkModelMetrics>>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  async getQuantumCircuit(): Promise<any> {
+  async getQuantumCircuit(forceRefresh = false): Promise<any> {
+    const cacheKey = "quantum_circuit";
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 1_800_000); // 30 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/models/quantum-circuit`);
-    return handleResponse<any>(res);
+    const data = await handleResponse<any>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
-  async getQuantumKernelMatrix(samples: number = 16): Promise<QuantumKernelMatrix> {
+  async getQuantumKernelMatrix(samples: number = 16, forceRefresh = false): Promise<QuantumKernelMatrix> {
+    const cacheKey = `quantum_kernel_${samples}`;
+    if (!forceRefresh) {
+      const cached = getCached<QuantumKernelMatrix>(cacheKey, 900_000); // 15 min TTL
+      if (cached) return cached;
+    }
     const res = await fetch(`${API_BASE_URL}/models/kernel-matrix?samples=${samples}`);
-    return handleResponse<QuantumKernelMatrix>(res);
+    const data = await handleResponse<QuantumKernelMatrix>(res);
+    setCached(cacheKey, data);
+    return data;
   },
 
   // Agricultural Data

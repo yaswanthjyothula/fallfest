@@ -27,9 +27,9 @@ export default function ModelBenchmarksPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Classical vs. Quantum Machine Learning Benchmarks
-        </h1>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          Model Performance Comparison
+        </h2>
         <p className="text-xs text-slate-500">
           Cross-validated performance metrics across 4 algorithms evaluated on identical test splits without data leakage.
         </p>

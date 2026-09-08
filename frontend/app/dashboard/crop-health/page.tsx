@@ -27,9 +27,9 @@ export default function CropHealthPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Copernicus Sentinel-2 Crop Health & Canopy Intelligence
-        </h1>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          Satellite Crop Health
+        </h2>
         <p className="text-xs text-slate-500">
           Multispectral Level-2A surface reflectance computing Normalized Difference Vegetation Index (B08 NIR vs B04 Red).
         </p>

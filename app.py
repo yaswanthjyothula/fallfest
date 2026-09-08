@@ -572,6 +572,13 @@ section[data-testid="stSidebar"] div.stButton > button:hover p {
     background-color: #138A4B;
     border-radius: 50%;
 }
+
+/* Clean Header: Remove broken top right elements, status widgets, and decorations */
+#MainMenu { visibility: hidden !important; display: none !important; }
+footer { visibility: hidden !important; display: none !important; }
+[data-testid="stStatusWidget"] { display: none !important; visibility: hidden !important; }
+[data-testid="stDecoration"] { display: none !important; visibility: hidden !important; }
+[data-testid="stToolbar"] { visibility: hidden !important; display: none !important; }
 </style>
 """
 
@@ -1320,8 +1327,8 @@ elif st.session_state.app_view == "dashboard":
             )
 
             # Chart: Actual vs Predicted Yield
-            test_preds = benchmark["predictions"]
-            y_test_arr = benchmark["y_test"]
+            test_preds = benchmark.get("predictions") or benchmark.get("test_predictions", {})
+            y_test_arr = benchmark.get("y_test", data_dict.get("y_test", np.array([38.0])))
             n_pts = min(15, len(y_test_arr))
             idx_range = np.arange(1, n_pts + 1)
 
@@ -2265,18 +2272,24 @@ elif st.session_state.app_view == "dashboard":
             unsafe_allow_html=True,
         )
 
-        metrics_df = benchmark["metrics_df"].copy()
-        metrics_df.rename(
-            columns={
+        metrics_df = (benchmark.get("summary_df") if "summary_df" in benchmark else benchmark.get("metrics_df", pd.DataFrame())).copy()
+        if not metrics_df.empty:
+            # Map column names case-insensitively
+            col_map = {
+                "model": "Model Architecture",
                 "Model": "Model Architecture",
+                "r2": "R² Score",
                 "R2": "R² Score",
+                "rmse": "RMSE (q/acre)",
                 "RMSE": "RMSE (q/acre)",
+                "mae": "MAE (q/acre)",
                 "MAE": "MAE (q/acre)",
+                "train_time_sec": "Training Time (s)",
                 "Train_Time_s": "Training Time (s)",
+                "inf_time_sec": "Prediction Time (ms)",
                 "Inference_Time_ms": "Prediction Time (ms)",
-            },
-            inplace=True,
-        )
+            }
+            metrics_df.rename(columns={k: v for k, v in col_map.items() if k in metrics_df.columns}, inplace=True)
 
         st.dataframe(metrics_df, width="stretch", hide_index=True)
 

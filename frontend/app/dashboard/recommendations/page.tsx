@@ -48,9 +48,9 @@ export default function RecommendationsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Precision Agronomy Decision Support System
-        </h1>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          Precision Recommendations
+        </h2>
         <p className="text-xs text-slate-500">
           Optimal resource allocation engine balancing multi-nutrient Liebig constraints, irrigation timing, and input expenditure.
         </p>
@@ -66,9 +66,9 @@ export default function RecommendationsPage() {
           <button
             onClick={generatePlan}
             disabled={loading}
-            className="text-xs font-semibold px-3 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors disabled:opacity-50"
+            className="text-xs font-semibold px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
-            {loading ? "Re-optimizing..." : "Re-calculate Recommendations"}
+            {loading ? "Calculating..." : "Generate Recommendation"}
           </button>
         </div>
 

@@ -133,9 +133,9 @@ export default function QuantumAnalysisPage() {
           <Atom className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
           <span>Qiskit 2.x • Aer Simulator • Statevector Fidelity Kernel</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
-          Quantum Machine Learning Architecture
-        </h1>
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+          Quantum Model Analysis
+        </h2>
         <p className="text-xs text-slate-500 max-w-3xl leading-relaxed">
           AgriQuantum maps 4 non-linear continuous agricultural drivers into a $2^4 = 16$-dimensional Hilbert space using the ZZFeatureMap. The fidelity-based Gram matrix computes inner products directly between quantum state vectors.
         </p>

@@ -156,10 +156,18 @@ class AgronomicBenchmarkSuite:
         # Sort by R² descending
         summary_df = summary_df.sort_values(by="r2", ascending=False).reset_index(drop=True)
 
+        # Add key aliases to self.test_predictions for seamless indexing
+        self.test_predictions["Quantum SVR"] = self.test_predictions.get("Quantum SVR (QSVR)", y_test)
+        self.test_predictions["Classical SVR"] = self.test_predictions.get("Classical SVR (RBF)", y_test)
+        preds_dict = dict(self.test_predictions)
+
         return {
             "summary_df": summary_df,
+            "metrics_df": summary_df,  # Backward compatible alias
             "metrics": self.results,
-            "test_predictions": self.test_predictions,
+            "test_predictions": preds_dict,
+            "predictions": preds_dict,  # Dictionary containing model predictions
+            "y_test": y_test,  # Ground truth array
             "rmse_improvement_vs_csvr": round(rmse_improvement_vs_csvr, 2),
             "rmse_improvement_vs_rf": round(rmse_improvement_vs_rf, 2),
             "qsvr_r2": self.results["Quantum SVR (QSVR)"]["r2"],

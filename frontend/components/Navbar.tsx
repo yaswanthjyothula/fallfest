@@ -1,18 +1,76 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { api, Farm } from "@/lib/api";
-import { ChevronDown, MapPin, Activity, Bell, Sparkles, User } from "lucide-react";
+import { Menu, MapPin } from "lucide-react";
 
 interface NavbarProps {
+  onToggleMobile?: () => void;
   activeFarmId?: number;
   onFarmChange?: (farmId: number) => void;
 }
 
-export function Navbar({ activeFarmId, onFarmChange }: NavbarProps) {
+const ROUTE_TITLES: Record<string, { title: string; desc: string }> = {
+  "/dashboard": {
+    title: "Farm Overview",
+    desc: "Monitor crop performance, soil conditions, predictions, and recommendations.",
+  },
+  "/dashboard/predict": {
+    title: "Crop Yield Prediction",
+    desc: "Enter your farm conditions to estimate expected crop yield using quantum ML.",
+  },
+  "/dashboard/farms": {
+    title: "Farm Analysis",
+    desc: "Review detailed conditions and geospatial boundaries for each agricultural plot.",
+  },
+  "/dashboard/recommendations": {
+    title: "Precision Recommendations",
+    desc: "Review recommended fertilizer and irrigation adjustments for the selected field.",
+  },
+  "/dashboard/quantum": {
+    title: "Quantum Model Analysis",
+    desc: "Explore how agricultural data is represented and processed by the quantum model.",
+  },
+  "/dashboard/benchmarks": {
+    title: "Model Performance Comparison",
+    desc: "Compare quantum machine learning with established baseline models.",
+  },
+  "/dashboard/crop-health": {
+    title: "Satellite Crop Health",
+    desc: "Use Copernicus Sentinel-2 vegetation indices to evaluate current field vigor.",
+  },
+  "/dashboard/weather": {
+    title: "Hyperlocal Weather",
+    desc: "Review thermal budget, precipitation outlooks, and solar radiation conditions.",
+  },
+  "/dashboard/data": {
+    title: "Farm Data",
+    desc: "Inspect agricultural training datasets and upload verified CSV plot records.",
+  },
+  "/dashboard/reports": {
+    title: "Agricultural Report",
+    desc: "Create and export certified agronomic evaluation documents.",
+  },
+  "/dashboard/settings": {
+    title: "Platform Settings",
+    desc: "Configure agronomic measurement units, cloud database endpoints, and preferences.",
+  },
+  "/dashboard/help": {
+    title: "Help and Support",
+    desc: "Operational documentation, agronomic formulas, and platform support.",
+  },
+};
+
+export function Navbar({ onToggleMobile, activeFarmId, onFarmChange }: NavbarProps) {
+  const pathname = usePathname();
   const [farms, setFarms] = useState<Farm[]>([]);
   const [selectedFarm, setSelectedFarm] = useState<Farm | null>(null);
-  const [healthStatus, setHealthStatus] = useState<string>("Ready");
+
+  const routeInfo = ROUTE_TITLES[pathname] || {
+    title: "Agricultural Intelligence",
+    desc: "Precision agronomy workspace.",
+  };
 
   useEffect(() => {
     async function loadFarms() {
@@ -29,91 +87,73 @@ export function Navbar({ activeFarmId, onFarmChange }: NavbarProps) {
           }
         }
       } catch (err) {
-        console.error("Failed to load farms:", err);
+        console.warn("Notice: Using default farm selection context");
       }
     }
-
-    async function checkHealth() {
-      try {
-        const health = await api.getHealth();
-        if (health.status === "healthy") {
-          setHealthStatus("System Online");
-        }
-      } catch {
-        setHealthStatus("Offline / Demo Mode");
-      }
-    }
-
     loadFarms();
-    checkHealth();
   }, [activeFarmId]);
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20">
-      {/* Active Farm Selector */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100/80 transition-colors">
-          <MapPin className="w-4 h-4 text-emerald-700 shrink-0" />
-          <div className="text-xs">
-            <span className="text-slate-400 block text-[10px] font-medium leading-none mb-0.5">Active Holding</span>
-            <select
-              value={selectedFarm?.id || ""}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                const found = farms.find((f) => f.id === id);
-                if (found) {
-                  setSelectedFarm(found);
-                  if (onFarmChange) onFarmChange(id);
-                }
-              }}
-              className="bg-transparent font-semibold text-slate-800 focus:outline-none cursor-pointer pr-2 text-xs"
-            >
-              {farms.map((farm) => (
-                <option key={farm.id} value={farm.id}>
-                  {farm.name} ({farm.total_area_hectares} ha)
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {selectedFarm && (
-          <div className="hidden md:flex items-center gap-2 text-xs text-slate-500">
-            <span className="font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">
-              {selectedFarm.latitude.toFixed(4)}° N, {selectedFarm.longitude.toFixed(4)}° E
-            </span>
-            <span className="text-slate-300">•</span>
-            <span>{selectedFarm.location}</span>
-          </div>
+    <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-20">
+      {/* Left: Mobile Toggle + Page Title & Subtitle */}
+      <div className="flex items-center gap-3 min-w-0">
+        {onToggleMobile && (
+          <button
+            onClick={onToggleMobile}
+            className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors shrink-0"
+            aria-label="Toggle navigation menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
         )}
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight truncate">
+            {routeInfo.title}
+          </h1>
+          <p className="text-[11px] text-slate-500 hidden sm:block truncate">
+            {routeInfo.desc}
+          </p>
+        </div>
       </div>
 
-      {/* Right Controls: Health pill, notifications, profile */}
-      <div className="flex items-center gap-3">
-        {/* System Health Status */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-200/60 rounded-full text-[11px] font-medium text-emerald-800">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>{healthStatus}</span>
+      {/* Right: Farm Selector + User Profile */}
+      <div className="flex items-center gap-3 shrink-0">
+        {/* Farm Selector */}
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+          <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+          <select
+            value={selectedFarm?.id || ""}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              const found = farms.find((f) => f.id === id);
+              if (found) {
+                setSelectedFarm(found);
+                if (onFarmChange) onFarmChange(id);
+              }
+            }}
+            className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer text-xs pr-1"
+            aria-label="Select active farm"
+          >
+            {farms.length === 0 ? (
+              <option value="">Green Valley Station (120 ha)</option>
+            ) : (
+              farms.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name} ({f.total_area_hectares} ha)
+                </option>
+              ))
+            )}
+          </select>
         </div>
 
-        {/* Action Button */}
-        <a
-          href="/dashboard/predict"
-          className="flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm transition-all"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Run Inference</span>
-        </a>
-
-        {/* User Badge */}
-        <div className="flex items-center gap-2.5 pl-3 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700 font-semibold text-xs">
-            <User className="w-4 h-4 text-slate-600" />
+        {/* User Profile Pill */}
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
+            AT
           </div>
-          <div className="hidden lg:block text-left">
-            <div className="text-xs font-semibold text-slate-800 leading-tight">Dr. Aris Thorne</div>
-            <div className="text-[10px] text-slate-500 font-medium">Administrator</div>
-          </div>
+          <span className="hidden md:block text-xs font-semibold text-slate-800">
+            Dr. Aris Thorne
+          </span>
         </div>
       </div>
     </header>

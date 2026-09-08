@@ -50,9 +50,9 @@ export default function AgriculturalDataExplorerPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Agricultural Data Explorer & Batch Ingestion
-        </h1>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+          Farm Data
+        </h2>
         <p className="text-xs text-slate-500">
           Inspect validated multi-parameter field records, verify nutrient distributions, and ingest agronomic CSV datasets.
         </p>

@@ -345,12 +345,12 @@ export default function YieldPredictionPage() {
               {loading ? (
                 <>
                   <Atom className="w-4 h-4 animate-spin" />
-                  <span>Computing Statevector Kernel Projection...</span>
+                  <span>Quantum analysis is being calculated...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Execute 4-Qubit QSVR Inference</span>
+                  <span>Run Yield Prediction</span>
                 </>
               )}
             </button>

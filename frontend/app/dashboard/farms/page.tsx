@@ -170,7 +170,7 @@ export default function FarmManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Farm & Field Management</h1>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">Farm Analysis & Management</h2>
           <p className="text-xs text-slate-500">
             Configure agricultural stations, geographic boundaries, plot soils, and active crop cycles.
           </p>
