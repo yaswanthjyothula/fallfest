@@ -22,7 +22,9 @@ ENV/
 *.sqlite3
 agriquantum.db
 
-# OS generated
-Thumbs.db
-Desktop.ini
-.DS_Store
+# Frontend
+node_modules/
+.next/
+frontend/node_modules/
+frontend/.next/
+

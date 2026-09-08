@@ -8,10 +8,10 @@
 [![Design System](https://img.shields.io/badge/Brand%20Design-White%20%2B%20Green-138A4B)](#2-brand-color-system-and-typography)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
-> **Platform Overview**: Commercial grade agritech platform engineered for researchers, farmers, agronomists, investors, and technical evaluators.  
+> **Platform Overview**: Commercial-grade precision agritech platform engineered for researchers, farmers, agronomists, investors, and technical evaluators.  
 > **Brand Palette**: Professional White and Green identity (`#138A4B`, `#075B35`, `#28B866`, `#E8F6EE`, `#F4FAF6`, `#FFFFFF`, `#F7F9F8`).  
-> **Typography**: 'Plus Jakarta Sans', Inter clean modern typography.  
-> **Architecture**: Dual engine platform featuring a **Streamlit Web Application** (`:8501`) and a **FastAPI REST Backend** (`:8000`).
+> **Typography System**: Strict **Inter** sans-serif font globally for UI text; **Geist Mono** strictly for technical codes (qubit counts, model tags, dataset hashes).  
+> **Architecture**: Multi-tier production platform featuring a **Next.js 15 Web Application** (`frontend/` on `:3000`), a **Streamlit Dashboard** (`:8501`), and a **FastAPI Production REST Gateway** (`:8000`).
 
 ---
 
@@ -26,49 +26,67 @@ Modern agriculture is data rich, yet critical agronomic decisions remain constra
 
 ---
 
-## 2. Brand Color System and Typography
+## 2. Typography & Visual Identity
 
-The design follows a **75% White/Neutral, 20% Green, 5% Supporting** visual ratio:
+The interface strictly adheres to an enterprise sans-serif design language:
 
-| Token | Hex / Value | Semantic Role |
+| Visual Element | Specification | Semantic Role |
 | :--- | :--- | :--- |
-| **Primary Green** | `#138A4B` | Main brand accent, primary buttons, active state highlights |
-| **Deep Green** | `#075B35` | Major titles, brand logo, strong typographical contrast |
-| **Accent Green** | `#28B866` | Live status pulse, positive indicators, hover accents |
-| **Soft Green** | `#E8F6EE` | Active navigation pill, badge fills, highlight card surfaces |
-| **Pale Green** | `#F4FAF6` | Alert containers, subtle card backgrounds |
-| **White** | `#FFFFFF` | Cards, persistent sidebar, elevated panels |
-| **Main Background**| `#F7F9F8` | Clean, spacious application canvas |
-| **Primary Text** | `#15231B` | High contrast body text and headers |
-| **Secondary Text** | `#68756E` | Explanations, labels, secondary metrics |
-| **Border** | `#DFE8E2` | 1px clean card and divider strokes |
-| **Typography** | `'Plus Jakarta Sans', Inter, sans-serif` | Clean, modern, highly legible |
+| **Primary Sans Font** | **Inter** (400, 500, 600, 700) | Headings, navigation, body copy, form labels, buttons, tooltips |
+| **Technical Font** | **Geist Mono** (monospace) | Model versions, qubit counts, circuit depths, API status badges, hashes |
+| **Primary Green** | `#138A4B` | Main brand accent, primary action buttons, active tab highlights |
+| **Deep Green** | `#075B35` | Major titles, brand logo, high contrast accents |
+| **Accent Green** | `#28B866` | Operational status indicators, positive yields |
+| **Soft Green** | `#E8F6EE` | Active navigation pill, badge fills, highlight surfaces |
+| **Canvas Background**| `#F8FAFC` | Clean, spacious application workspace canvas |
 
 ---
 
 ## 3. Full Stack Architecture
 
-AgriQuantum operates as a complete full stack agritech platform:
+AgriQuantum operates as a complete multi-tier enterprise architecture:
 
 ```
 fallfest/
 ├── assets/
-│   └── hero_agriculture.jpg    # High resolution aerial drone agriculture photography
-├── backend/
-│   ├── __init__.py
-│   └── api.py                  # FastAPI REST API exposing 9 endpoints on port 8000
+│   └── hero_agriculture.jpg    # Aerial drone photography
+├── backend/                    # FastAPI Production REST Gateway (:8000)
+│   ├── api.py                  # Server initialization and middleware
+│   ├── api_v1.py               # Versioned REST router (/api/v1/) with 20+ endpoints
+│   ├── auth.py                 # Bcrypt hashing + signed JWT Bearer auth
+│   ├── database.py             # SQLAlchemy engine & SQLite/PostgreSQL connection
+│   ├── models.py               # 15 core relational database entities
+│   ├── schemas.py              # Strict Pydantic models for validation
+│   ├── security.py             # Rate limiting, secure headers & audit logging
+│   └── services/               # Reusable business logic clients
+│       ├── visual_crossing_service.py # Visual Crossing Weather API (1-hr TTL cache)
+│       ├── satellite_service.py       # Copernicus Sentinel-2 L2A vegetation pipeline
+│       ├── report_service.py          # ReportLab certified PDF generator
+│       └── supabase_service.py        # Supabase cloud telemetry & health sync
+├── frontend/                   # Next.js 15 App Router Frontend (:3000)
+│   ├── app/                    # TypeScript page routes
+│   │   ├── dashboard/          # Control Center, Farms, Predict, Quantum, etc.
+│   │   ├── globals.css         # Inter font tokens and emerald themes
+│   │   ├── layout.tsx          # Root layout with Inter & Geist Mono fonts
+│   │   └── page.tsx            # Cinematic agritech landing page
+│   ├── components/             # Sidebar, Navbar, and widgets
+│   └── lib/api.ts              # Typed REST client connecting to FastAPI
 ├── core/
-│   ├── __init__.py
-│   ├── quantum_engine.py       # 4 Qubit ZZFeatureMap (reps=2, linear) and precomputed QSVR
-│   ├── benchmark.py           # QSVR vs Random Forest vs Classical SVR vs Ridge Regression
-│   └── recommender.py         # Constrained N-P-K and irrigation optimizer
+│   ├── quantum_engine.py       # 4-Qubit ZZFeatureMap & fidelity quantum kernel QSVR
+│   ├── benchmark.py            # QSVR vs Random Forest vs RBF SVR vs Ridge
+│   └── recommender.py          # Constrained N-P-K and irrigation optimizer
 ├── data/
-│   ├── __init__.py
-│   └── generator.py           # Agronomic biophysical model and [0, 2π] quantum scaler
-├── tests/
-│   └── test_engine.py          # Complete unit and integration test suite (6 tests passing)
-├── app.py                      # Streamlit web application on port 8501
-└── README.md                   # Platform documentation and API schema
+│   └── generator.py            # Agronomic biophysical model and [0, 2π] quantum scaler
+├── tests/                      # Automated test suite (36 tests passing)
+│   ├── test_engine.py
+│   ├── test_database.py
+│   ├── test_api_v1.py
+│   ├── test_supabase.py
+│   ├── test_weather_visual_crossing.py
+│   └── test_farm_crud_and_data.py
+├── app.py                      # Streamlit interactive dashboard on port 8501
+├── docker-compose.yml          # Full stack orchestration (Postgres, Redis, API, Next.js, Dashboard)
+└── README.md                   # Enterprise architecture and operations manual
 ```
 
 ---
@@ -187,18 +205,33 @@ COPERNICUS_CLIENT_SECRET=your_client_secret
 
 ### 3. Run Automated Test Suite
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
-*Result*: `Ran 31 tests. OK (100% Passing across quantum engine, database, API v1, Supabase, and Visual Crossing)`
+*Result*: `Ran 36 tests in 11.4s. OK (100% Passing across quantum engine, database, API v1, Supabase, Visual Crossing, and Farm CRUD)`
 
 ### 4. Launch Services
-- **Streamlit Web Application**:
-  ```bash
-  python -m streamlit run app.py --server.port 8501
-  ```
-  Open **`http://localhost:8501`** in your browser.
-- **FastAPI REST Service**:
-  ```bash
-  python -m uvicorn backend.api:app --host 0.0.0.0 --port 8000
-  ```
-  Open **`http://localhost:8000/docs`** for interactive Swagger API documentation.
+
+#### A. Next.js 15 Enterprise Web Frontend (`:3000`)
+```bash
+cd frontend
+npm run dev
+```
+Open **`http://localhost:3000`** in your browser for the React/Next.js interface.
+
+#### B. FastAPI REST Production Gateway (`:8000`)
+```bash
+python -m uvicorn backend.api:app --host 0.0.0.0 --port 8000
+```
+Open **`http://localhost:8000/docs`** for interactive Swagger API documentation.
+
+#### C. Streamlit Python Dashboard (`:8501`)
+```bash
+python -m streamlit run app.py --server.port 8501
+```
+Open **`http://localhost:8501`** in your browser for the Python-native dashboard.
+
+#### D. Full-Stack Docker Compose
+```bash
+docker compose up --build -d
+```
+Spins up PostgreSQL 15, FastAPI (`:8000`), Next.js (`:3000`), and Streamlit (`:8501`).

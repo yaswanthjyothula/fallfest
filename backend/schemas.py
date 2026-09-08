@@ -68,6 +68,37 @@ class FieldResponse(BaseModel):
         from_attributes = True
 
 
+class FieldUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    area_hectares: Optional[float] = Field(None, gt=0.1, le=10000.0)
+    soil_type: Optional[str] = None
+    boundary_geojson: Optional[str] = None
+
+
+class CropCreate(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    variety: Optional[str] = None
+    season: str = Field(default="Rabi")
+    growth_stage: str = Field(default="Vegetative")
+    planting_date: Optional[datetime] = None
+    expected_harvest_date: Optional[datetime] = None
+
+
+class CropResponse(BaseModel):
+    id: int
+    field_id: int
+    name: str
+    variety: Optional[str]
+    season: str
+    growth_stage: str
+    planting_date: Optional[datetime]
+    expected_harvest_date: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class FarmCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=150)
     location: str = Field(..., min_length=2, max_length=200)
@@ -76,6 +107,16 @@ class FarmCreate(BaseModel):
     latitude: float = Field(..., ge=-90.0, le=90.0)
     longitude: float = Field(..., ge=-180.0, le=180.0)
     total_area_hectares: float = Field(..., gt=0.5, le=50000.0)
+
+
+class FarmUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=150)
+    location: Optional[str] = Field(None, min_length=2, max_length=200)
+    state: Optional[str] = None
+    country: Optional[str] = None
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    total_area_hectares: Optional[float] = Field(None, gt=0.5, le=50000.0)
 
 
 class FarmResponse(BaseModel):
@@ -327,3 +368,54 @@ class ReportResponse(BaseModel):
     file_url: str
     summary: str
     generated_at: datetime
+
+
+# ==============================================================================
+# QUANTUM KERNEL & ADVANCED ML SCHEMAS
+# ==============================================================================
+class QuantumKernelMatrixResponse(BaseModel):
+    dimension: int
+    sample_ids: List[str]
+    matrix: List[List[float]]
+    min_kernel_value: float
+    max_kernel_value: float
+    qubit_count: int = 4
+    feature_map: str = "ZZFeatureMap (2 Repetitions, Linear Entanglement)"
+    backend: str = "Qiskit Aer Simulator (Fidelity Statevector Kernel)"
+    generated_at: datetime
+
+
+class AgriculturalDataCSVUploadResponse(BaseModel):
+    filename: str
+    total_rows: int
+    valid_rows: int
+    invalid_rows: int
+    columns_detected: List[str]
+    validation_errors: List[str] = []
+    preview: List[Dict[str, Any]] = []
+    status: str
+
+
+class CropHealthAnalysisResponse(BaseModel):
+    field_id: int
+    field_name: str
+    mean_ndvi: float
+    health_status: str
+    growth_stage: str
+    ndvi_anomaly: float
+    cloud_coverage_pct: float
+    satellite_mission: str = "Copernicus Sentinel-2 L2A"
+    credentials_configured: bool
+    historical_ndvi_trend: List[Dict[str, Any]]
+    observed_at: datetime
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    email: EmailStr
+    token: str
+    new_password: str = Field(..., min_length=8)
+
