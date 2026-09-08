@@ -89,11 +89,56 @@ class TestDecisionIntelligence(unittest.TestCase):
         self.assertIn("risk_factors", data)
         categories = [f["category"] for f in data["risk_factors"]]
         self.assertIn("Water Stress Risk", categories)
-        self.assertIn("Thermal & Climate Risk", categories)
-        self.assertIn("Canopy Vigor Risk", categories)
-        self.assertIn("Nutrient Imbalance Risk", categories)
+        self.assertIn("Weather Risk", categories)
+        self.assertIn("Crop Health Risk", categories)
+        self.assertIn("Yield Risk", categories)
+        self.assertIn("Input Risk", categories)
+        for rf in data["risk_factors"]:
+            self.assertIn("action_link", rf)
+            self.assertIn("action_label", rf)
+
+    def test_weather_intelligence_endpoint(self):
+        res = self.client.get("/api/v1/weather/intelligence/1")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["farm_id"], 1)
+        self.assertIn("current", data)
+        self.assertIn("daily_forecast", data)
+        self.assertIn("hourly_forecast", data)
+        self.assertIn("rainfall_intelligence", data)
+        self.assertIn("farm_weather_status", data)
+        self.assertIn("weather_impact_curves", data)
+        self.assertIn(data["farm_weather_status"]["status"], ["Favorable", "Watch", "Attention", "High Risk"])
+        self.assertGreater(len(data["daily_forecast"]), 0)
+        self.assertGreater(len(data["hourly_forecast"]), 0)
+
+    def test_quantum_weather_scenario_endpoint(self):
+        payload = {
+            "farm_id": 1,
+            "rainfall_delta_pct": -35.0,
+            "temperature_delta_c": 2.5,
+            "irrigation_adjustment_mm": 15.0,
+            "scenario_name": "Test Drought Simulation"
+        }
+        res = self.client.post("/api/v1/quantum/weather-scenario", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("scenario_id", data)
+        self.assertGreater(data["simulated_yield_t_ha"], 0)
+        self.assertIn("SIMULATED SCENARIO", data["is_simulation_disclaimer"].upper())
+        self.assertEqual(data["quantum_configuration"]["qubit_count"], 4)
+
+        self.assertIn("ZZFeatureMap", data["quantum_configuration"]["feature_map"])
+
+    def test_weather_radar_endpoint(self):
+        res = self.client.get("/api/v1/weather/radar/1")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("overall_risk_score", data)
+        self.assertEqual(len(data["risk_factors"]), 5)
 
     def test_copilot_query_endpoint(self):
+
         payload = {"farm_id": 1, "query": "What is my predicted wheat yield?"}
         res = self.client.post("/api/v1/copilot/query", json=payload)
         self.assertEqual(res.status_code, 200)

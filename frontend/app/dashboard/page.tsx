@@ -11,7 +11,9 @@ import {
   ShieldCheck,
   ChevronRight,
   ArrowUpRight,
+  ArrowRight,
   Sparkles,
+
   Layers,
   Calendar,
   AlertCircle,
@@ -221,32 +223,38 @@ export default function FarmOverviewPage() {
         </div>
 
         {/* Metric 4: Hyperlocal Weather */}
-        <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-2">
+        <Link
+          href="/dashboard/weather"
+          className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-2 hover:border-emerald-300 hover:shadow-sm transition group cursor-pointer"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Weather</span>
-            <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-emerald-700 transition">
+              Weather Intelligence
+            </span>
+            <span className="p-1.5 rounded-lg bg-amber-50 text-amber-700 group-hover:bg-emerald-50 group-hover:text-emerald-700 transition">
               <CloudSun className="w-4 h-4" />
             </span>
           </div>
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-slate-900">
-                {weather ? `${weather.temperature_c.toFixed(1)}°C` : "29.5°C"}
+                {weather ? `${weather.temperature_c.toFixed(1)}°C` : "28.5°C"}
               </span>
               <span className="text-xs text-slate-500 font-medium">
-                {weather?.conditions || "Clear Sky"}
+                {weather?.conditions || "Partly Cloudy"}
               </span>
             </div>
             <div className="text-[11px] text-slate-500 mt-0.5">
-              Humidity: {weather?.humidity_pct || 42}% • Rain: {weather?.precipitation_mm || 0}mm
+              Humidity: {weather?.humidity_pct || 52}% • Rain: {weather?.precipitation_mm || 0}mm
             </div>
           </div>
-          <div className="text-[11px] text-slate-500 flex items-center gap-1 pt-1 border-t border-slate-100">
-            <span>Visual Crossing API</span>
-            <span>• 7-Day Window</span>
+          <div className="text-[11px] text-emerald-800 font-medium flex items-center justify-between pt-1 border-t border-slate-100">
+            <span>7-Day Envelope & Quantum Sim</span>
+            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-700 group-hover:translate-x-0.5 transition" />
           </div>
-        </div>
+        </Link>
       </div>
+
 
       {/* 3. Recommended Next Action Banner */}
       <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">

@@ -18,6 +18,7 @@ import {
   X,
   Sliders,
   Layers,
+  CloudSun,
 } from "lucide-react";
 
 interface NavItem {
@@ -29,13 +30,14 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Yield Prediction", href: "/dashboard/predict", icon: Sparkles },
-  { name: "What-If Simulator", href: "/dashboard/scenarios", icon: Sliders },
-  { name: "Farm Digital Twin", href: "/dashboard/twin", icon: Layers },
   { name: "Farm Analysis", href: "/dashboard/farms", icon: MapPin },
   { name: "Recommendations", href: "/dashboard/recommendations", icon: TrendingUp },
+  { name: "What-If Simulator", href: "/dashboard/scenarios", icon: Sliders },
+  { name: "Farm Digital Twin", href: "/dashboard/twin", icon: Layers },
   { name: "Quantum Analysis", href: "/dashboard/quantum", icon: Atom },
   { name: "Model Comparison", href: "/dashboard/benchmarks", icon: BarChart3 },
   { name: "Crop Health", href: "/dashboard/crop-health", icon: Leaf },
+  { name: "Weather", href: "/dashboard/weather", icon: CloudSun },
   { name: "Agricultural Data", href: "/dashboard/data", icon: Database },
   { name: "Reports", href: "/dashboard/reports", icon: FileCheck2 },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },

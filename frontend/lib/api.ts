@@ -128,6 +128,118 @@ export interface WeatherForecastDay {
   conditions: string;
 }
 
+export interface HourlyForecastItem {
+  time: string;
+  temperature_c: number;
+  precipitation_mm: number;
+  pop_pct: number;
+  humidity_pct: number;
+  wind_speed_kmh: number;
+  conditions: string;
+}
+
+export interface DailyForecastItem {
+  date: string;
+  temp_max_c: number;
+  temp_min_c: number;
+  temp_mean_c: number;
+  precipitation_mm: number;
+  precip_prob_pct: number;
+  humidity_pct: number;
+  wind_speed_kmh: number;
+  wind_direction_deg?: number;
+  conditions: string;
+  uv_index?: number;
+  sunrise?: string;
+  sunset?: string;
+}
+
+export interface RainfallIntelligenceItem {
+  recent_observed_mm: number;
+  forecast_7d_cumulative_mm: number;
+  baseline_30d_normal_mm: number;
+  deviation_pct: number;
+  trend_direction: "Deficit" | "Normal" | "Surplus";
+  interpretation: string;
+}
+
+export interface FarmWeatherStatusItem {
+  status: "Favorable" | "Watch" | "Attention" | "High Risk" | "Insufficient Data";
+  headline: string;
+  rationale: string;
+  checklist: string[];
+}
+
+export interface WeatherImpactCurvePoint {
+  variable_val: number;
+  yield_t_ha: number;
+}
+
+export interface WeatherImpactCurves {
+  rainfall_vs_yield: WeatherImpactCurvePoint[];
+  temp_vs_yield: WeatherImpactCurvePoint[];
+  optimal_rainfall_range_mm: string;
+  optimal_temp_range_c: string;
+  r2_rainfall: number;
+  r2_temperature: number;
+}
+
+export interface WeatherIntelligenceResponse {
+  farm_id: number;
+  farm_name: string;
+  latitude: number;
+  longitude: number;
+  weather_provider: string;
+  data_provenance: string;
+  last_updated: string;
+  current: Record<string, any>;
+  daily_forecast: DailyForecastItem[];
+  hourly_forecast: HourlyForecastItem[];
+  rainfall_intelligence: RainfallIntelligenceItem;
+  farm_weather_status: FarmWeatherStatusItem;
+  weather_impact_curves: WeatherImpactCurves;
+  operational_advisories: Record<string, string>;
+}
+
+export interface QuantumWeatherScenarioRequest {
+  farm_id?: number;
+  crop?: string;
+  rainfall_delta_pct?: number;
+  temperature_delta_c?: number;
+  irrigation_adjustment_mm?: number;
+  scenario_type?: string;
+  scenario_name?: string;
+}
+
+export interface QuantumWeatherScenarioResponse {
+  scenario_id: string;
+  scenario_name: string;
+  scenario_type: string;
+  simulated_rainfall_mm: number;
+  simulated_temperature_c: number;
+  simulated_moisture_pct: number;
+  simulated_yield_t_ha: number;
+  baseline_yield_t_ha: number;
+  yield_delta_t_ha: number;
+  yield_delta_pct: number;
+  water_requirement_mm: number;
+  water_stress_tier: string;
+  economic_estimate: Record<string, number>;
+  decision_score: number;
+  model_name: string;
+  model_version: string;
+  quantum_configuration: Record<string, any>;
+  why_it_changed: Array<{
+    feature: string;
+    factor_role: string;
+    influence: string;
+    description: string;
+  }>;
+  is_simulation_disclaimer: string;
+  timestamp: string;
+}
+
+
 export interface BenchmarkModelMetrics {
   r2_score: number;
   rmse: number;
@@ -413,6 +525,40 @@ export const api = {
     setCached(cacheKey, data);
     return data;
   },
+
+  async getWeatherIntelligence(farmId: number, forceRefresh = false): Promise<WeatherIntelligenceResponse> {
+    const cacheKey = `weather_intel_${farmId}`;
+    if (!forceRefresh) {
+      const cached = getCached<WeatherIntelligenceResponse>(cacheKey, 180_000); // 3 min TTL
+      if (cached) return cached;
+    }
+    const res = await fetch(`${API_BASE_URL}/weather/intelligence/${farmId}`);
+    const data = await handleResponse<WeatherIntelligenceResponse>(res);
+    setCached(cacheKey, data);
+    return data;
+  },
+
+  async runQuantumWeatherScenario(payload: QuantumWeatherScenarioRequest): Promise<QuantumWeatherScenarioResponse> {
+    const res = await fetch(`${API_BASE_URL}/quantum/weather-scenario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<QuantumWeatherScenarioResponse>(res);
+  },
+
+  async getWeatherRadar(farmId: number, forceRefresh = false): Promise<any> {
+    const cacheKey = `weather_radar_${farmId}`;
+    if (!forceRefresh) {
+      const cached = getCached<any>(cacheKey, 180_000);
+      if (cached) return cached;
+    }
+    const res = await fetch(`${API_BASE_URL}/weather/radar/${farmId}`);
+    const data = await handleResponse<any>(res);
+    setCached(cacheKey, data);
+    return data;
+  },
+
 
   // Satellite & Crop Health - 10 min cache
   async getSatelliteCropHealth(fieldId: number, forceRefresh = false): Promise<any> {

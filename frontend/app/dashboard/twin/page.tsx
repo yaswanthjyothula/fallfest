@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useFarm } from "@/lib/FarmContext";
 import {
@@ -20,7 +21,9 @@ import {
   Satellite,
   Droplets,
   HelpCircle,
+  ArrowRight,
 } from "lucide-react";
+
 import { FarmTimeline } from "@/components/FarmTimeline";
 import { FarmMemoryFeedbackModal } from "@/components/FarmMemoryFeedbackModal";
 import { offlineSync } from "@/lib/offlineSync";
@@ -244,13 +247,25 @@ export default function FarmDigitalTwinPage() {
                         </span>
                       </div>
                       <p className="text-[11px] leading-relaxed opacity-90">{description}</p>
-                      <div className="pt-1 text-[10px] font-medium flex items-center gap-1 border-t border-current/10">
-                        <TrendingUp className="w-3 h-3 shrink-0" />
-                        <span>Mitigation: {mitigation}</span>
+                      <div className="pt-1.5 text-[10px] font-medium flex items-center justify-between border-t border-current/10">
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="w-3 h-3 shrink-0" />
+                          <span>Mitigation: {mitigation}</span>
+                        </div>
+                        {rf.action_link && (
+                          <Link
+                            href={rf.action_link}
+                            className="inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded bg-white/80 hover:bg-white text-slate-800 transition shadow-2xs"
+                          >
+                            <span>{rf.action_label || "Take Action"}</span>
+                            <ArrowRight className="w-2.5 h-2.5" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                   );
                 })}
+
               </div>
             ) : (
               <div className="py-6 text-center text-xs text-slate-400">

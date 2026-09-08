@@ -26,7 +26,7 @@ from backend.auth import (
     require_role,
 )
 from backend.security import log_audit_event
-from backend.services.weather_service import get_farm_weather
+from backend.services.weather_service import get_farm_weather, get_weather_intelligence
 from backend.services.visual_crossing_service import (
     get_visual_crossing_service,
     WeatherValidationError,
@@ -652,6 +652,182 @@ async def get_live_weather(farm_id: int, db: Session = Depends(get_db)):
             source=weather_data["source"],
             retrieved_at=datetime.utcnow(),
         )
+
+
+@router.get("/weather/intelligence/{farm_id}", response_model=schemas.WeatherIntelligenceResponse)
+def get_farm_weather_intelligence_endpoint(farm_id: int, db: Session = Depends(get_db)):
+    """
+    Comprehensive Weather Intelligence System:
+    Integrates live current conditions, 7-day forecast envelope, 24h hourly progression,
+    Rainfall Intelligence (deviations from 30d baseline), transparent Farm Weather Status,
+    and empirical Weather-to-Yield sensitivity curves.
+    """
+    farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+    lat = farm.latitude if farm else 16.5062
+    lon = farm.longitude if farm else 80.6480
+    name = farm.name if farm else "Green Valley Agricultural Station"
+
+    data = get_weather_intelligence(farm_id=farm_id, latitude=lat, longitude=lon, farm_name=name)
+    return schemas.WeatherIntelligenceResponse(**data)
+
+
+@router.post("/quantum/weather-scenario", response_model=schemas.QuantumWeatherScenarioResponse)
+def evaluate_quantum_weather_scenario(req: schemas.QuantumWeatherScenarioRequest, db: Session = Depends(get_db)):
+    """
+    Quantum Weather to Yield Simulator (Weather What-If):
+    Evaluates simulated meteorological variations (Rainfall deviation, Temperature drift, Supplemental Irrigation)
+    directly through the 4-Qubit QSVR engine (Qiskit Aer Simulator with ZZFeatureMap).
+    Computes yield change, water requirement, economic margins, and model explainability.
+    """
+    farm = db.query(models.Farm).filter(models.Farm.id == req.farm_id).first()
+
+    # Baseline regional values for Wheat
+    base_rainfall = 450.0
+    base_temp = 24.5
+    base_moisture = 28.5
+    base_nitrogen = 92.0
+    base_ndvi = 0.74
+
+    # Evaluate baseline with QSVR
+    scaled_base = _SCALER.transform(np.array([[base_nitrogen, base_moisture, base_rainfall, base_ndvi]]))
+    base_yield_q = float(_ENGINE.predict(scaled_base)[0])
+    base_yield_t_ha = round(base_yield_q * 0.247105, 2)
+
+    # Simulated condition adjustments
+    sim_rainfall = max(50.0, base_rainfall * (1.0 + req.rainfall_delta_pct / 100.0))
+    sim_temp = max(10.0, min(45.0, base_temp + req.temperature_delta_c))
+
+    # Soil moisture shifts with rainfall and evapotranspiration
+    moisture_shift = (req.rainfall_delta_pct * 0.12) - (req.temperature_delta_c * 1.1) + (req.irrigation_adjustment_mm * 0.45)
+    sim_moisture = max(12.0, min(55.0, round(base_moisture + moisture_shift, 1)))
+
+    # QSVR live prediction on simulated feature point
+    scaled_sim = _SCALER.transform(np.array([[base_nitrogen, sim_moisture, sim_rainfall, base_ndvi]]))
+    sim_yield_q = float(_ENGINE.predict(scaled_sim)[0])
+    sim_yield_t_ha = round(sim_yield_q * 0.247105, 2)
+
+    yield_delta_t_ha = round(sim_yield_t_ha - base_yield_t_ha, 2)
+    yield_delta_pct = round(((sim_yield_t_ha - base_yield_t_ha) / max(0.1, base_yield_t_ha)) * 100.0, 1)
+
+    # Water requirement based on evapotranspiration model
+    water_req_mm = round(max(50.0, (sim_temp * 14.5) - (sim_rainfall * 0.30)), 1)
+
+    # Determine water stress tier
+    if sim_moisture < 18.0 or (sim_rainfall < 200.0 and req.irrigation_adjustment_mm < 10.0):
+        stress_tier = "Severe Deficit"
+    elif sim_moisture < 24.0:
+        stress_tier = "Moderate Deficit"
+    elif sim_moisture > 44.0:
+        stress_tier = "Surplus / Waterlogged"
+    else:
+        stress_tier = "Optimal Hydration"
+
+    # Regional economics (INR) with Wheat MSP ~₹2,275/q
+    msp_inr_q = 2275.0
+    gross_rev = round(sim_yield_q * msp_inr_q, 0)
+    irr_cost = req.irrigation_adjustment_mm * 65.0
+    total_cost = 14940.0 + irr_cost
+    net_profit = round(gross_rev - total_cost, 0)
+    base_profit = (base_yield_q * msp_inr_q) - 14940.0
+    savings_vs_base = round(net_profit - base_profit, 0)
+
+    # Transparent Decision Score (0-100)
+    norm_yield = min(100.0, (sim_yield_t_ha / 5.5) * 100.0)
+    norm_profit = min(100.0, max(0.0, (net_profit / 80000.0) * 100.0))
+    norm_water = 90.0 if stress_tier == "Optimal Hydration" else (60.0 if "Moderate" in stress_tier else 40.0)
+    norm_risk = 90.0 if stress_tier == "Optimal Hydration" else 55.0
+    dec_score = round((0.35 * norm_yield) + (0.30 * norm_profit) + (0.20 * norm_water) + (0.15 * norm_risk), 1)
+
+    # Why did the result change?
+    why_list = []
+    if req.rainfall_delta_pct != 0.0:
+        why_list.append({
+            "factor": "Simulated Rainfall",
+            "delta": f"{'+' if req.rainfall_delta_pct > 0 else ''}{req.rainfall_delta_pct:.1f}% ({sim_rainfall:.1f} mm)",
+            "contribution": "positive" if 0 < req.rainfall_delta_pct <= 30 else ("diminishing" if req.rainfall_delta_pct > 30 else "negative"),
+            "rationale": "Boosts root-zone moisture toward 30% field capacity" if req.rainfall_delta_pct > 0 else "Induces moisture stress, limiting vegetative canopy expansion"
+        })
+    if req.temperature_delta_c != 0.0:
+        why_list.append({
+            "factor": "Simulated Temperature",
+            "delta": f"{'+' if req.temperature_delta_c > 0 else ''}{req.temperature_delta_c:.1f}°C ({sim_temp:.1f}°C)",
+            "contribution": "negative" if req.temperature_delta_c > 2.0 else "neutral",
+            "rationale": "Accelerates evapotranspirative loss and accelerates grain maturity" if req.temperature_delta_c > 0 else "Maintains extended grain-filling window"
+        })
+    if req.irrigation_adjustment_mm > 0.0:
+        why_list.append({
+            "factor": "Supplemental Irrigation Buffer",
+            "delta": f"+{req.irrigation_adjustment_mm:.1f} mm",
+            "contribution": "positive",
+            "rationale": "Mitigates thermal moisture deficit and stabilizes root absorption"
+        })
+
+    scenario_id = f"wsc_{int(datetime.now(timezone.utc).timestamp())}_{req.scenario_type or 'custom'}"
+
+    return schemas.QuantumWeatherScenarioResponse(
+        scenario_id=scenario_id,
+        scenario_name=req.scenario_name or "Weather What-If Scenario",
+        scenario_type=req.scenario_type or "custom",
+        simulated_rainfall_mm=round(sim_rainfall, 1),
+        simulated_temperature_c=round(sim_temp, 1),
+        simulated_moisture_pct=round(sim_moisture, 1),
+        simulated_yield_t_ha=sim_yield_t_ha,
+        baseline_yield_t_ha=base_yield_t_ha,
+        yield_delta_t_ha=yield_delta_t_ha,
+        yield_delta_pct=yield_delta_pct,
+        water_requirement_mm=water_req_mm,
+        water_stress_tier=stress_tier,
+        economic_estimate={
+            "gross_revenue": gross_rev,
+            "input_cost": total_cost,
+            "net_profit": net_profit,
+            "delta_vs_baseline": savings_vs_base,
+        },
+        decision_score=dec_score,
+        model_name="Quantum Support Vector Regressor (QSVR)",
+        model_version="v2.5.0-aer",
+        quantum_configuration={
+            "qubit_count": 4,
+            "feature_map": "ZZFeatureMap (Linear Entanglement, 2 Reps)",
+            "kernel_method": "Fidelity Statevector Overlap",
+            "circuit_depth": 19,
+            "backend": "Qiskit Aer Simulator",
+            "features_encoded": ["Nitrogen", "Soil Moisture", "Precipitation", "NDVI"]
+        },
+        why_it_changed=why_list,
+        is_simulation_disclaimer="SIMULATED SCENARIO (MODEL GENERATED) - This is an agricultural simulation based on the 4-Qubit QSVR engine and does not represent an actual weather forecast.",
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
+@router.get("/weather/radar/{farm_id}", response_model=schemas.FarmRiskOutlookResponse)
+def get_weather_risk_radar(farm_id: int, db: Session = Depends(get_db)):
+    """
+    Agricultural Weather Risk Radar:
+    Returns the forward-looking 5-factor risk assessment (Water Stress, Weather Risk,
+    Crop Health Risk, Yield Risk, Input Risk) with contextual action paths.
+    """
+    farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+    lat = farm.latitude if farm else 16.5062
+    lon = farm.longitude if farm else 80.6480
+    name = farm.name if farm else "Target Farm"
+
+    weather = get_weather_intelligence(farm_id=farm_id, latitude=lat, longitude=lon, farm_name=name)
+    cur = weather.get("current", {})
+
+    risk_data = evaluate_farm_risk(
+        farm_id=farm_id,
+        farm_name=name,
+        soil_moisture_pct=28.5,
+        rainfall_mm=float(cur.get("precipitation_mm", 0.0)) + 450.0,
+        temperature_c=float(cur.get("temperature_c", 25.2)),
+        ndvi=0.74,
+        nitrogen_kg_ha=92.0,
+        phosphorus_kg_ha=44.0,
+        potassium_kg_ha=58.0,
+    )
+
+    return schemas.FarmRiskOutlookResponse(**risk_data)
 
 
 @router.get("/satellite/{field_id}", response_model=schemas.SatelliteCropHealthResponse)

@@ -492,12 +492,14 @@ class ExplainabilityResponse(BaseModel):
 
 
 class RiskFactor(BaseModel):
-    category: str  # Water Stress, Thermal Risk, Canopy Vigor, Yield Variability, Nutrient Imbalance
+    category: str  # Water Stress, Weather Risk, Crop Health, Yield Risk, Input Risk
     score: float  # 0 to 100
     risk_level: str  # Low, Moderate, High, Critical, Insufficient Data
     headline: str
     explanation: str
     mitigation_action: str
+    action_link: Optional[str] = None
+    action_label: Optional[str] = None
 
 
 class FarmRiskOutlookResponse(BaseModel):
@@ -648,5 +650,112 @@ class QuantumScenarioResponse(BaseModel):
     quantum_configuration: Dict[str, Any]
     why_it_changed: List[Dict[str, Any]]
     timestamp: datetime
+
+
+class HourlyForecastItem(BaseModel):
+    time: str
+    temperature_c: float
+    precipitation_mm: float
+    pop_pct: float
+    humidity_pct: float
+    wind_speed_kmh: float
+    conditions: str
+
+
+class DailyForecastItem(BaseModel):
+    date: str
+    temp_max_c: float
+    temp_min_c: float
+    temp_mean_c: float
+    precipitation_mm: float
+    precip_prob_pct: float
+    humidity_pct: float
+    wind_speed_kmh: float
+    wind_direction_deg: Optional[float] = None
+    conditions: str
+    uv_index: Optional[float] = None
+    sunrise: Optional[str] = None
+    sunset: Optional[str] = None
+
+
+class RainfallIntelligenceItem(BaseModel):
+    recent_observed_mm: float
+    forecast_7d_cumulative_mm: float
+    baseline_30d_normal_mm: float
+    deviation_pct: float
+    trend_direction: str  # Deficit, Normal, Surplus
+    interpretation: str
+
+
+class FarmWeatherStatusItem(BaseModel):
+    status: str  # Favorable, Watch, Attention, High Risk, Insufficient Data
+    headline: str
+    rationale: str
+    checklist: List[str]
+
+
+class WeatherImpactCurvePoint(BaseModel):
+    variable_val: float
+    yield_t_ha: float
+
+
+class WeatherImpactCurves(BaseModel):
+    rainfall_vs_yield: List[WeatherImpactCurvePoint]
+    temp_vs_yield: List[WeatherImpactCurvePoint]
+    optimal_rainfall_range_mm: str
+    optimal_temp_range_c: str
+    r2_rainfall: float
+    r2_temperature: float
+
+
+class WeatherIntelligenceResponse(BaseModel):
+    farm_id: int
+    farm_name: str
+    latitude: float
+    longitude: float
+    weather_provider: str
+    data_provenance: str
+    last_updated: datetime
+    current: Dict[str, Any]
+    daily_forecast: List[DailyForecastItem]
+    hourly_forecast: List[HourlyForecastItem]
+    rainfall_intelligence: RainfallIntelligenceItem
+    farm_weather_status: FarmWeatherStatusItem
+    weather_impact_curves: WeatherImpactCurves
+    operational_advisories: Dict[str, str]
+
+
+class QuantumWeatherScenarioRequest(BaseModel):
+    farm_id: Optional[int] = 1
+    crop: str = "Winter Wheat"
+    rainfall_delta_pct: float = Field(0.0, ge=-70.0, le=100.0, description="Simulated precipitation variation %")
+    temperature_delta_c: float = Field(0.0, ge=-8.0, le=10.0, description="Simulated temperature deviation in °C")
+    irrigation_adjustment_mm: float = Field(0.0, ge=0.0, le=100.0, description="Supplemental irrigation mitigation in mm")
+    scenario_type: Optional[str] = "custom"
+    scenario_name: Optional[str] = "Weather What-If Simulation"
+
+
+class QuantumWeatherScenarioResponse(BaseModel):
+    scenario_id: str
+    scenario_name: str
+    scenario_type: str
+    simulated_rainfall_mm: float
+    simulated_temperature_c: float
+    simulated_moisture_pct: float
+    simulated_yield_t_ha: float
+    baseline_yield_t_ha: float
+    yield_delta_t_ha: float
+    yield_delta_pct: float
+    water_requirement_mm: float
+    water_stress_tier: str
+    economic_estimate: Dict[str, float]
+    decision_score: float
+    model_name: str
+    model_version: str
+    quantum_configuration: Dict[str, Any]
+    why_it_changed: List[Dict[str, Any]]
+    is_simulation_disclaimer: str
+    timestamp: datetime
+
 
 
