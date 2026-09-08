@@ -342,3 +342,30 @@ class DiseaseDetection(Base):
 
     field = relationship("Field", back_populates="disease_detections")
 
+
+class ModelBenchmarkRecord(Base):
+    __tablename__ = "model_benchmark_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    benchmark_id = Column(String(64), nullable=False, index=True)
+    model_id = Column(String(50), nullable=False, index=True)  # e.g., 'qsvr', 'rf', 'csvr', 'ridge'
+    model_name = Column(String(100), nullable=False)
+    model_type = Column(String(50), nullable=False)  # 'Quantum ML' or 'Classical ML'
+    model_version = Column(String(50), default="1.0.0", nullable=False)
+    dataset_id = Column(String(100), default="agri-benchmark-dataset", nullable=False)
+    dataset_version = Column(String(50), default="v2.4-calibrated", nullable=False)
+    sample_count = Column(Integer, nullable=False)
+    r2 = Column(Float, nullable=False)
+    rmse = Column(Float, nullable=False)
+    mae = Column(Float, nullable=False)
+    mape = Column(Float, nullable=False)
+    training_time = Column(Float, nullable=False)
+    inference_time = Column(Float, nullable=False)
+    evaluation_timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    feature_configuration = Column(Text, nullable=True)  # JSON string of features & preprocessors
+    quantum_configuration = Column(Text, nullable=True)  # JSON string of qubits, circuit depth, ansatz
+    predictions_json = Column(Text, nullable=True)  # JSON string of actual vs predicted
+    residuals_json = Column(Text, nullable=True)  # JSON string of residuals
+    environment_json = Column(Text, nullable=True)  # JSON string of CPU, memory, python, qiskit version
+
+

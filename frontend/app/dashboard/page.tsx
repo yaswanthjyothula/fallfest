@@ -12,8 +12,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   ArrowRight,
-  Sparkles,
-
+  LineChart,
   Layers,
   Calendar,
   AlertCircle,
@@ -157,7 +156,7 @@ export default function FarmOverviewPage() {
               href="/dashboard/predict"
               className="inline-flex items-center gap-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-xs transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <LineChart className="w-3.5 h-3.5" />
               <span>Run Yield Prediction</span>
             </Link>
             <Link
@@ -324,7 +323,7 @@ export default function FarmOverviewPage() {
         <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4 hover:border-emerald-300 transition-colors">
           <div className="space-y-2">
             <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
-              <Sparkles className="w-4 h-4" />
+              <LineChart className="w-4 h-4" />
             </div>
             <h3 className="font-semibold text-slate-900 text-sm">Crop Yield Prediction</h3>
             <p className="text-xs text-slate-500 leading-relaxed">

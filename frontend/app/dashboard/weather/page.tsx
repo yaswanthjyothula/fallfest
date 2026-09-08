@@ -21,7 +21,7 @@ import {
   Cpu,
   Layers,
   Activity,
-  Sparkles,
+  Atom,
   RefreshCw,
   ArrowRight,
   ChevronDown,
@@ -1038,7 +1038,7 @@ export default function WeatherIntelligencePage() {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 text-emerald-200" />
+                      <Atom className="w-4 h-4 text-emerald-200" />
                       <span>{isScenarioDirty ? "Scenario Changed — Run Quantum Analysis" : "Re-Calculate Quantum Scenario"}</span>
                     </>
                   )}
@@ -1196,7 +1196,7 @@ export default function WeatherIntelligencePage() {
                         <tbody className="divide-y divide-slate-800 text-slate-300">
                           <tr className="bg-emerald-950/20 text-emerald-300">
                             <td className="py-1.5 font-bold flex items-center gap-1">
-                              <Sparkles className="w-3 h-3 text-emerald-400" />
+                              <Atom className="w-3 h-3 text-emerald-400" />
                               <span>AgriQuantum QSVR (4-Qubit)</span>
                             </td>
                             <td className="py-1.5 font-bold">0.941</td>

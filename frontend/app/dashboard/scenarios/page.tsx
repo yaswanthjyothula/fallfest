@@ -285,8 +285,8 @@ export default function ScenariosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 text-white p-6 rounded-2xl shadow-sm">
         <div>
           <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" />
-            Signature AgriQuantum Capability
+            <Sliders className="w-4 h-4" />
+            <span>Farm Decision What-If Simulator</span>
           </div>
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight mt-1">
             Quantum What-If Farm Decision Simulator
@@ -445,7 +445,7 @@ export default function ScenariosPage() {
             disabled={loading}
             className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center gap-2 transition-all"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sliders className="w-3.5 h-3.5" />
             <span>Compute Quantum Scenarios</span>
           </button>
         </div>

@@ -50,6 +50,7 @@ class AgriQuantumEngine:
         c_param: float = 10.0,
         epsilon: float = 0.1,
         kernel_mode: str = "statevector",
+        phase_scale: float = 0.1,
     ):
         """
         Initialize the Quantum Engine.
@@ -69,6 +70,9 @@ class AgriQuantumEngine:
         kernel_mode : str
             'statevector' for ultra-fast exact statevector fidelity,
             or 'sampler' for primitive-based fidelity.
+        phase_scale : float
+            Harmonic phase scaling factor to map [0, 2π] feature bounds into optimal
+            Hilbert space phase separation (default 0.1).
         """
         self.feature_dimension = feature_dimension
         self.reps = reps
@@ -76,6 +80,7 @@ class AgriQuantumEngine:
         self.c_param = c_param
         self.epsilon = epsilon
         self.kernel_mode = kernel_mode
+        self.phase_scale = phase_scale
 
         # 1. Build the 4-Qubit ZZFeatureMap
         if _HAS_ZZ_FUNC:
@@ -137,12 +142,12 @@ class AgriQuantumEngine:
         --------
         np.ndarray of shape (N1, N2) or (N1, N1) if X2 is None
         """
-        X1_arr = np.asarray(X1, dtype=np.float64)
+        X1_arr = np.asarray(X1, dtype=np.float64) * self.phase_scale
         if X1_arr.ndim == 1:
             X1_arr = X1_arr.reshape(1, -1)
 
         if X2 is not None:
-            X2_arr = np.asarray(X2, dtype=np.float64)
+            X2_arr = np.asarray(X2, dtype=np.float64) * self.phase_scale
             if X2_arr.ndim == 1:
                 X2_arr = X2_arr.reshape(1, -1)
             K = self.kernel.evaluate(X1_arr, X2_arr)
@@ -214,6 +219,9 @@ class AgriQuantumEngine:
         gate_counts = dict(decomposed.count_ops())
         
         return {
+            "model_name": "Quantum Support Vector Regressor (QSVR)",
+            "feature_map": "ZZFeatureMap (Second-order Pauli-Z expansion)",
+            "kernel_type": "FidelityStatevectorKernel (Exact State Fidelity)",
             "num_qubits": self.feature_dimension,
             "reps": self.reps,
             "entanglement": self.entanglement,
@@ -221,6 +229,11 @@ class AgriQuantumEngine:
             "total_gates": sum(gate_counts.values()),
             "gate_counts": gate_counts,
             "num_parameters": self.feature_map.num_parameters,
+            "c_param": self.c_param,
+            "epsilon": self.epsilon,
+            "phase_scale": self.phase_scale,
+            "backend": "Qiskit Aer Statevector Fidelity Simulator",
+            "disclosed_limitations": "4-qubit feature subspace (Soil Nitrogen, Soil Moisture, Rainfall, NDVI) utilized to operate within NISQ statevector simulation boundaries without gate synthesis decoherence.",
         }
 
     def get_circuit_ascii(self) -> str:

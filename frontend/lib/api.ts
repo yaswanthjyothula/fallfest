@@ -240,18 +240,105 @@ export interface QuantumWeatherScenarioResponse {
 }
 
 
-export interface BenchmarkModelMetrics {
-  r2_score: number;
+export interface BenchmarkScatterPoint {
+  sample_id: string;
+  actual: number;
+  predicted: number;
+}
+
+export interface BenchmarkResidualPoint {
+  sample_id: string;
+  predicted: number;
+  residual: number;
+}
+
+export interface ModelEvaluationMetricItem {
+  model_id: string;
+  model: string;
+  type: string;
+  framework: string;
+  r2: number;
   rmse: number;
   mae: number;
-  training_time_seconds: number;
-  inference_time_seconds: number;
-  circuit_qubits?: number;
-  circuit_depth?: number;
-  feature_map?: string;
-  n_estimators?: number;
-  kernel_type?: string;
+  mape: number;
+  train_time_sec: number;
+  inf_time_sec: number;
+  rank: number;
 }
+
+export interface HeadlineComparisonModel {
+  name: string;
+  r2: number;
+  rmse: number;
+  mae: number;
+  mape: number;
+  train_time_sec: number;
+  inf_time_sec: number;
+}
+
+export interface HeadlineComparisonData {
+  quantum_model: HeadlineComparisonModel;
+  best_classical_model: HeadlineComparisonModel;
+  r2_delta: number;
+  rmse_delta: number;
+  mae_delta: number;
+  winner: string;
+  summary_statement: string;
+}
+
+export interface EvaluationDatasetInfo {
+  name: string;
+  version: string;
+  sample_count: number;
+  train_count: number;
+  test_count: number;
+  features: string[];
+  target: string;
+  train_split: number;
+  test_split: number;
+  validation_method: string;
+  random_seed: number;
+}
+
+export interface EvaluationEnvironmentInfo {
+  cpu: string;
+  cores: number;
+  memory_gb: number;
+  python_version: string;
+  qiskit_version: string;
+  qiskit_aer_version: string;
+  os: string;
+}
+
+export interface QuantumModelTechnicalDetails {
+  model_name: string;
+  feature_map: string;
+  kernel_type: string;
+  entanglement: string;
+  num_qubits: number;
+  reps: number;
+  circuit_depth: number;
+  total_gates: number;
+  backend: string;
+  regularization_c: number;
+  epsilon: number;
+  disclosed_limitations: string;
+}
+
+export interface BenchmarkResponse {
+  benchmark_id: string;
+  timestamp: string;
+  models: ModelEvaluationMetricItem[];
+  headline_comparison: HeadlineComparisonData;
+  dataset: EvaluationDatasetInfo;
+  evaluation_environment: EvaluationEnvironmentInfo;
+  quantum_details: QuantumModelTechnicalDetails;
+  actual_vs_predicted: Record<string, BenchmarkScatterPoint[]>;
+  residuals: Record<string, BenchmarkResidualPoint[]>;
+}
+
+// Backward compatibility alias
+export type BenchmarkModelMetrics = ModelEvaluationMetricItem;
 
 // ---------------------------------------------------------------------------
 // In-Memory Staged Cache System
@@ -574,16 +661,37 @@ export const api = {
   },
 
   // Benchmarks & Quantum - 15 min cache
-  async getBenchmarks(forceRefresh = false): Promise<Record<string, BenchmarkModelMetrics>> {
+  async getBenchmarks(forceRefresh = false): Promise<BenchmarkResponse> {
     const cacheKey = "benchmarks_data";
     if (!forceRefresh) {
-      const cached = getCached<Record<string, BenchmarkModelMetrics>>(cacheKey, 900_000);
+      const cached = getCached<BenchmarkResponse>(cacheKey, 900_000);
       if (cached) return cached;
     }
     const res = await fetch(`${API_BASE_URL}/models/benchmark`);
-    const data = await handleResponse<Record<string, BenchmarkModelMetrics>>(res);
+    const data = await handleResponse<BenchmarkResponse>(res);
     setCached(cacheKey, data);
     return data;
+  },
+
+  async runBenchmark(sampleCount: number = 130, randomSeed: number = 42): Promise<BenchmarkResponse> {
+    const res = await fetch(`${API_BASE_URL}/models/benchmark/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sample_count: sampleCount, random_seed: randomSeed, test_size: 0.25 }),
+    });
+    const data = await handleResponse<BenchmarkResponse>(res);
+    setCached("benchmarks_data", data);
+    return data;
+  },
+
+  async getModelPredictions(modelId: string): Promise<BenchmarkScatterPoint[]> {
+    const res = await fetch(`${API_BASE_URL}/models/${encodeURIComponent(modelId)}/predictions`);
+    return handleResponse<BenchmarkScatterPoint[]>(res);
+  },
+
+  async getModelResiduals(modelId: string): Promise<BenchmarkResidualPoint[]> {
+    const res = await fetch(`${API_BASE_URL}/models/${encodeURIComponent(modelId)}/residuals`);
+    return handleResponse<BenchmarkResidualPoint[]>(res);
   },
 
   async getQuantumCircuit(forceRefresh = false): Promise<any> {

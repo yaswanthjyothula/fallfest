@@ -144,7 +144,7 @@ export default function QuantumAnalysisPage() {
       {/* Layman Agricultural Explanation Box */}
       <div className="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 text-xs text-emerald-950 space-y-2">
         <div className="font-semibold text-emerald-900 flex items-center gap-1.5">
-          <Sparkles className="w-4 h-4 text-emerald-700" />
+          <Atom className="w-4 h-4 text-emerald-700" />
           <span>How Quantum Computing Enhances Crop Yield Prediction</span>
         </div>
         <p className="leading-relaxed text-emerald-900/90">

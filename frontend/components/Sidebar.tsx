@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
-  Sparkles,
+  LineChart,
   MapPin,
   TrendingUp,
   Atom,
@@ -29,7 +29,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Yield Prediction", href: "/dashboard/predict", icon: Sparkles },
+  { name: "Yield Prediction", href: "/dashboard/predict", icon: LineChart },
   { name: "Farm Analysis", href: "/dashboard/farms", icon: MapPin },
   { name: "Recommendations", href: "/dashboard/recommendations", icon: TrendingUp },
   { name: "What-If Simulator", href: "/dashboard/scenarios", icon: Sliders },

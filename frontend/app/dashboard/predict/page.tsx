@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  Sparkles,
+  FlaskConical,
   Info,
   CheckCircle2,
   AlertTriangle,
@@ -462,7 +462,7 @@ export default function YieldPredictionPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4" />
+                  <FlaskConical className="w-4 h-4" />
                   <span>Run Yield Prediction</span>
                 </>
               )}
@@ -593,7 +593,7 @@ export default function YieldPredictionPage() {
                     className="text-[11px] bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-3 py-1 rounded-lg transition-colors flex items-center gap-1"
                   >
                     <span>Simulate Scenarios</span>
-                    <Sparkles className="w-3 h-3" />
+                    <Sliders className="w-3 h-3" />
                   </a>
                 </div>
 

@@ -758,4 +758,112 @@ class QuantumWeatherScenarioResponse(BaseModel):
     timestamp: datetime
 
 
+# ==============================================================================
+# MODEL BENCHMARK & COMPARISON SCHEMAS
+# ==============================================================================
+
+class BenchmarkScatterPoint(BaseModel):
+    sample_id: str
+    actual: float
+    predicted: float
+
+
+class BenchmarkResidualPoint(BaseModel):
+    sample_id: str
+    predicted: float
+    residual: float
+
+
+class ModelEvaluationMetricItem(BaseModel):
+    model_id: str
+    model: str
+    type: str
+    framework: str
+    r2: float
+    rmse: float
+    mae: float
+    mape: float
+    train_time_sec: float
+    inf_time_sec: float
+    rank: int
+
+
+class HeadlineComparisonModel(BaseModel):
+    name: str
+    r2: float
+    rmse: float
+    mae: float
+    mape: float
+    train_time_sec: float
+    inf_time_sec: float
+
+
+class HeadlineComparisonData(BaseModel):
+    quantum_model: HeadlineComparisonModel
+    best_classical_model: HeadlineComparisonModel
+    r2_delta: float
+    rmse_delta: float
+    mae_delta: float
+    winner: str
+    summary_statement: str
+
+
+class EvaluationDatasetInfo(BaseModel):
+    name: str
+    version: str
+    sample_count: int
+    train_count: int
+    test_count: int
+    features: List[str]
+    target: str
+    train_split: float
+    test_split: float
+    validation_method: str
+    random_seed: int
+
+
+class EvaluationEnvironmentInfo(BaseModel):
+    cpu: str
+    cores: int
+    memory_gb: float
+    python_version: str
+    qiskit_version: str
+    qiskit_aer_version: str
+    os: str
+
+
+class QuantumModelTechnicalDetails(BaseModel):
+    model_name: str
+    feature_map: str
+    kernel_type: str
+    entanglement: str
+    num_qubits: int
+    reps: int
+    circuit_depth: int
+    total_gates: int
+    backend: str
+    regularization_c: float
+    epsilon: float
+    disclosed_limitations: str
+
+
+class BenchmarkResponse(BaseModel):
+    benchmark_id: str
+    timestamp: datetime
+    models: List[ModelEvaluationMetricItem]
+    headline_comparison: HeadlineComparisonData
+    dataset: EvaluationDatasetInfo
+    evaluation_environment: EvaluationEnvironmentInfo
+    quantum_details: QuantumModelTechnicalDetails
+    actual_vs_predicted: Dict[str, List[BenchmarkScatterPoint]]
+    residuals: Dict[str, List[BenchmarkResidualPoint]]
+
+
+class BenchmarkRunRequest(BaseModel):
+    sample_count: int = Field(130, ge=40, le=500, description="Total sample plots in agronomic dataset")
+    random_seed: int = Field(42, ge=0, le=999999, description="Random seed for reproducible train/test split")
+    test_size: float = Field(0.25, ge=0.1, le=0.4, description="Test split proportion")
+
+
+
 

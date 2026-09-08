@@ -79,8 +79,10 @@ class TestApiV1Endpoints(unittest.TestCase):
         response = self.client.get("/api/v1/models/benchmark")
         self.assertEqual(response.status_code, 200)
         data = response.json()
-        self.assertIn("Quantum SVR (QSVR)", data)
-        self.assertIn("Random Forest", data)
+        model_names = [m["model"] for m in data.get("models", [])]
+        self.assertIn("Quantum SVR (QSVR)", model_names)
+        self.assertIn("Random Forest", model_names)
+        self.assertIn("headline_comparison", data)
 
     def test_quantum_circuit_spec(self):
         """Test GET /api/v1/models/quantum-circuit returns decomposed ASCII diagram."""

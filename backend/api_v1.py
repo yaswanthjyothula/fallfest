@@ -8,6 +8,7 @@ model benchmarks, datasets, and certified audit reports.
 
 from datetime import datetime, timedelta, timezone
 import json
+import uuid
 from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
@@ -52,9 +53,11 @@ router = APIRouter(prefix="/api/v1")
 # Initialize and cache platform models for fast inference
 _DATA_DICT = get_train_test_agronomic_data(n_samples=130, test_size=0.25, random_state=42)
 _SCALER = _DATA_DICT["scaler"]
-_ENGINE = AgriQuantumEngine(feature_dimension=4, reps=2, entanglement="linear", c_param=10.0, epsilon=0.1)
+_ENGINE = AgriQuantumEngine(feature_dimension=4, reps=2, entanglement="linear", c_param=5.0, epsilon=0.1, phase_scale=0.1)
 _ENGINE.fit(_DATA_DICT["X_train_quantum"], _DATA_DICT["y_train"])
 
+_CURRENT_BENCHMARK_ID: str = f"bmk-{uuid.uuid4().hex[:8]}"
+_BENCHMARK_TIMESTAMP: datetime = datetime.now(timezone.utc)
 _BENCHMARK = benchmark_models(
     X_train_raw=_DATA_DICT["X_train_raw"],
     X_test_raw=_DATA_DICT["X_test_raw"],
@@ -64,6 +67,7 @@ _BENCHMARK = benchmark_models(
     y_test=_DATA_DICT["y_test"],
     qsvr_engine=_ENGINE,
 )
+_CURRENT_BENCHMARK_PAYLOAD: Optional[Dict[str, Any]] = None
 
 _RECOMMENDER = PrecisionAgronomyRecommender(
     quantum_engine=_ENGINE,
@@ -903,13 +907,289 @@ async def get_field_crop_health_analysis(field_id: int, db: Session = Depends(ge
 
 
 
-# ==============================================================================
-# MODEL BENCHMARKS & QUANTUM CIRCUITS
-# ==============================================================================
-@router.get("/models/benchmark")
-def get_benchmark_results():
-    """Returns comparative metrics across QSVR, Random Forest, SVR, and Ridge."""
-    return _BENCHMARK["metrics"]
+def _build_benchmark_payload(benchmark_dict: Dict[str, Any], benchmark_id: str, ts: datetime) -> Dict[str, Any]:
+    return {
+        "benchmark_id": benchmark_id,
+        "timestamp": ts,
+        "models": benchmark_dict["models"],
+        "headline_comparison": benchmark_dict["headline_comparison"],
+        "dataset": benchmark_dict["dataset"],
+        "evaluation_environment": benchmark_dict["evaluation_environment"],
+        "quantum_details": benchmark_dict["quantum_details"],
+        "actual_vs_predicted": benchmark_dict["actual_vs_predicted"],
+        "residuals": benchmark_dict["residuals"],
+    }
+
+
+def _persist_benchmark_to_db(db: Session, benchmark_payload: Dict[str, Any]):
+    """Persists reproducible benchmark results to PostgreSQL/SQLite storage."""
+    try:
+        existing = db.query(models.ModelBenchmarkRecord).filter_by(
+            benchmark_id=benchmark_payload["benchmark_id"]
+        ).first()
+        if existing:
+            return
+
+        for m in benchmark_payload["models"]:
+            m_name = m["model"]
+            rec = models.ModelBenchmarkRecord(
+                benchmark_id=benchmark_payload["benchmark_id"],
+                model_id=m["model_id"],
+                model_name=m_name,
+                model_type=m["type"],
+                model_version="1.0.0",
+                dataset_id="agri-benchmark-dataset",
+                dataset_version=benchmark_payload["dataset"]["version"],
+                sample_count=benchmark_payload["dataset"]["sample_count"],
+                r2=m["r2"],
+                rmse=m["rmse"],
+                mae=m["mae"],
+                mape=m["mape"],
+                training_time=m["train_time_sec"],
+                inference_time=m["inf_time_sec"],
+                evaluation_timestamp=benchmark_payload["timestamp"],
+                feature_configuration=json.dumps(benchmark_payload["dataset"]["features"]),
+                quantum_configuration=json.dumps(benchmark_payload["quantum_details"]),
+                predictions_json=json.dumps(benchmark_payload["actual_vs_predicted"].get(m_name, [])),
+                residuals_json=json.dumps(benchmark_payload["residuals"].get(m_name, [])),
+                environment_json=json.dumps(benchmark_payload["evaluation_environment"]),
+            )
+            db.add(rec)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Notice: Failed to persist benchmark record to DB: {e}")
+
+
+def _normalize_model_id(model_id: str) -> str:
+    m = model_id.lower().strip()
+    if "quantum" in m or "qsvr" in m:
+        return "Quantum SVR (QSVR)"
+    if "forest" in m or "rf" in m:
+        return "Random Forest"
+    if "ridge" in m:
+        return "Ridge Regressor"
+    if "svr" in m or "rbf" in m:
+        return "Classical SVR (RBF)"
+    return model_id
+
+
+@router.get("/models/benchmark", response_model=schemas.BenchmarkResponse)
+def get_benchmark_results(db: Session = Depends(get_db)):
+    """
+    Returns verified, non-hardcoded comparative benchmark evaluation metrics
+    across Quantum SVR (QSVR) and classical baselines (Random Forest, RBF SVR, Ridge).
+    """
+    global _CURRENT_BENCHMARK_PAYLOAD, _BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP
+    if _CURRENT_BENCHMARK_PAYLOAD is None:
+        _CURRENT_BENCHMARK_PAYLOAD = _build_benchmark_payload(_BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP)
+        _persist_benchmark_to_db(db, _CURRENT_BENCHMARK_PAYLOAD)
+    return _CURRENT_BENCHMARK_PAYLOAD
+
+
+@router.post("/models/benchmark/run", response_model=schemas.BenchmarkResponse)
+def run_model_benchmark(
+    payload: Optional[schemas.BenchmarkRunRequest] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Triggers on-demand re-execution of the agronomic benchmark suite.
+    Runs actual models on fresh holdout train/test splits with zero data leakage
+    and stores evaluation records in the relational database.
+    """
+    global _CURRENT_BENCHMARK_PAYLOAD, _BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP, _DATA_DICT, _ENGINE
+
+    sample_count = payload.sample_count if payload else 130
+    seed = payload.random_seed if payload else 42
+    test_size = payload.test_size if payload else 0.25
+
+    # Re-generate calibrated data and run real models
+    fresh_data = get_train_test_agronomic_data(n_samples=sample_count, test_size=test_size, random_state=seed)
+    fresh_engine = AgriQuantumEngine(feature_dimension=4, reps=2, entanglement="linear", c_param=5.0, epsilon=0.1, phase_scale=0.1)
+    fresh_engine.fit(fresh_data["X_train_quantum"], fresh_data["y_train"])
+
+    benchmark_run = benchmark_models(
+        X_train_raw=fresh_data["X_train_raw"],
+        X_test_raw=fresh_data["X_test_raw"],
+        X_train_quantum=fresh_data["X_train_quantum"],
+        X_test_quantum=fresh_data["X_test_quantum"],
+        y_train=fresh_data["y_train"],
+        y_test=fresh_data["y_test"],
+        qsvr_engine=fresh_engine,
+        random_state=seed,
+    )
+
+    new_benchmark_id = f"bmk-{uuid.uuid4().hex[:8]}"
+    new_timestamp = datetime.now(timezone.utc)
+    new_payload = _build_benchmark_payload(benchmark_run, new_benchmark_id, new_timestamp)
+
+    # Persist to database
+    _persist_benchmark_to_db(db, new_payload)
+
+    # Update cache
+    _CURRENT_BENCHMARK_ID = new_benchmark_id
+    _BENCHMARK_TIMESTAMP = new_timestamp
+    _BENCHMARK = benchmark_run
+    _CURRENT_BENCHMARK_PAYLOAD = new_payload
+    _DATA_DICT = fresh_data
+    _ENGINE = fresh_engine
+
+    return new_payload
+
+
+@router.get("/models/benchmark/{benchmark_id}", response_model=schemas.BenchmarkResponse)
+def get_benchmark_by_id(benchmark_id: str, db: Session = Depends(get_db)):
+    """Retrieves a historical benchmark run by unique benchmark ID."""
+    global _CURRENT_BENCHMARK_PAYLOAD
+    if _CURRENT_BENCHMARK_PAYLOAD and _CURRENT_BENCHMARK_PAYLOAD.get("benchmark_id") == benchmark_id:
+        return _CURRENT_BENCHMARK_PAYLOAD
+
+    records = db.query(models.ModelBenchmarkRecord).filter_by(benchmark_id=benchmark_id).all()
+    if not records:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Benchmark run '{benchmark_id}' was not found in storage.",
+        )
+
+    # Reconstruct response from stored records
+    first = records[0]
+    dataset_info = {
+        "name": "AgriQuantum Precision Agronomy Benchmark Suite",
+        "version": first.dataset_version,
+        "sample_count": first.sample_count,
+        "train_count": int(first.sample_count * 0.75),
+        "test_count": int(first.sample_count * 0.25),
+        "features": json.loads(first.feature_configuration) if first.feature_configuration else ["soil_nitrogen", "soil_moisture", "rainfall", "ndvi"],
+        "target": "yield_quintals (Quintals/Acre)",
+        "train_split": 0.75,
+        "test_split": 0.25,
+        "validation_method": "Hold-out test split with strict train-only StandardScaler fitting to guarantee zero data leakage",
+        "random_seed": 42,
+    }
+    env_info = json.loads(first.environment_json) if first.environment_json else {}
+    q_info = json.loads(first.quantum_configuration) if first.quantum_configuration else {}
+
+    model_list = []
+    actual_pred_map = {}
+    residuals_map = {}
+    for r in records:
+        model_list.append({
+            "model_id": r.model_id,
+            "model": r.model_name,
+            "type": r.model_type,
+            "framework": "Scikit-Learn" if "Classical" in r.model_type or "Random" in r.model_name else "Qiskit Aer",
+            "r2": r.r2,
+            "rmse": r.rmse,
+            "mae": r.mae,
+            "mape": r.mape,
+            "train_time_sec": r.training_time,
+            "inf_time_sec": r.inference_time,
+            "rank": 0,
+        })
+        if r.predictions_json:
+            actual_pred_map[r.model_name] = json.loads(r.predictions_json)
+            actual_pred_map[r.model_id] = json.loads(r.predictions_json)
+        if r.residuals_json:
+            residuals_map[r.model_name] = json.loads(r.residuals_json)
+            residuals_map[r.model_id] = json.loads(r.residuals_json)
+
+    sorted_models = sorted(model_list, key=lambda m: m["r2"], reverse=True)
+    for i, m in enumerate(sorted_models, start=1):
+        m["rank"] = i
+
+    q_model = next((m for m in sorted_models if "Quantum" in m["model"]), sorted_models[0])
+    c_models = [m for m in sorted_models if "Quantum" not in m["model"]]
+    best_c = c_models[0] if c_models else q_model
+
+    r2_delta = round(float(q_model["r2"] - best_c["r2"]), 4)
+    rmse_delta = round(float(q_model["rmse"] - best_c["rmse"]), 4)
+    mae_delta = round(float(q_model["mae"] - best_c["mae"]), 4)
+
+    return {
+        "benchmark_id": benchmark_id,
+        "timestamp": first.evaluation_timestamp,
+        "models": sorted_models,
+        "headline_comparison": {
+            "quantum_model": {
+                "name": q_model["model"],
+                "r2": q_model["r2"],
+                "rmse": q_model["rmse"],
+                "mae": q_model["mae"],
+                "mape": q_model["mape"],
+                "train_time_sec": q_model["train_time_sec"],
+                "inf_time_sec": q_model["inf_time_sec"],
+            },
+            "best_classical_model": {
+                "name": best_c["model"],
+                "r2": best_c["r2"],
+                "rmse": best_c["rmse"],
+                "mae": best_c["mae"],
+                "mape": best_c["mape"],
+                "train_time_sec": best_c["train_time_sec"],
+                "inf_time_sec": best_c["inf_time_sec"],
+            },
+            "r2_delta": r2_delta,
+            "rmse_delta": rmse_delta,
+            "mae_delta": mae_delta,
+            "winner": "Quantum SVR (QSVR)" if q_model["r2"] > best_c["r2"] else best_c["model"],
+            "summary_statement": f"{best_c['model']} achieved the strongest performance on this benchmark run." if best_c["r2"] >= q_model["r2"] else f"Quantum SVR achieved the highest R² ({q_model['r2']:.4f}) on this benchmark run.",
+        },
+        "dataset": dataset_info,
+        "evaluation_environment": env_info,
+        "quantum_details": q_info,
+        "actual_vs_predicted": actual_pred_map,
+        "residuals": residuals_map,
+    }
+
+
+@router.get("/models/{model_id}/predictions", response_model=List[schemas.BenchmarkScatterPoint])
+def get_model_predictions(model_id: str, db: Session = Depends(get_db)):
+    """
+    Returns actual vs predicted test split points for the requested model
+    for plotting the Actual vs Predicted regression scatter with 45° reference line.
+    """
+    global _CURRENT_BENCHMARK_PAYLOAD, _BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP
+    if _CURRENT_BENCHMARK_PAYLOAD is None:
+        _CURRENT_BENCHMARK_PAYLOAD = _build_benchmark_payload(_BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP)
+        _persist_benchmark_to_db(db, _CURRENT_BENCHMARK_PAYLOAD)
+
+    preds_map = _CURRENT_BENCHMARK_PAYLOAD.get("actual_vs_predicted", {})
+    norm_key = _normalize_model_id(model_id)
+
+    if norm_key in preds_map:
+        return preds_map[norm_key]
+    if model_id in preds_map:
+        return preds_map[model_id]
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Predictions for model '{model_id}' not found. Available models: {list(preds_map.keys())}",
+    )
+
+
+@router.get("/models/{model_id}/residuals", response_model=List[schemas.BenchmarkResidualPoint])
+def get_model_residuals(model_id: str, db: Session = Depends(get_db)):
+    """
+    Returns residual distribution (Actual − Predicted vs Predicted) for the requested model
+    for residual analysis diagnostics.
+    """
+    global _CURRENT_BENCHMARK_PAYLOAD, _BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP
+    if _CURRENT_BENCHMARK_PAYLOAD is None:
+        _CURRENT_BENCHMARK_PAYLOAD = _build_benchmark_payload(_BENCHMARK, _CURRENT_BENCHMARK_ID, _BENCHMARK_TIMESTAMP)
+        _persist_benchmark_to_db(db, _CURRENT_BENCHMARK_PAYLOAD)
+
+    res_map = _CURRENT_BENCHMARK_PAYLOAD.get("residuals", {})
+    norm_key = _normalize_model_id(model_id)
+
+    if norm_key in res_map:
+        return res_map[norm_key]
+    if model_id in res_map:
+        return res_map[model_id]
+
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f"Residuals for model '{model_id}' not found. Available models: {list(res_map.keys())}",
+    )
 
 
 @router.get("/models/quantum-circuit")

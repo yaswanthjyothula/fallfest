@@ -5,7 +5,7 @@ import {
   FileCheck2,
   Download,
   ShieldCheck,
-  Sparkles,
+  RefreshCw,
   AlertCircle,
   FileText,
   Check,
@@ -174,17 +174,17 @@ export default function ReportsPage() {
           <button
             onClick={handleGenerateReport}
             disabled={generating}
-            className="inline-flex items-center gap-2 bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all disabled:opacity-50 cursor-pointer"
           >
             {generating ? (
               <>
-                <Sparkles className="w-4 h-4 animate-spin" />
-                <span>Compiling Cryptographic Audit PDF...</span>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Compiling Agronomic Audit PDF...</span>
               </>
             ) : (
               <>
                 <FileText className="w-4 h-4" />
-                <span>Generate Report</span>
+                <span>Generate Audit Report</span>
               </>
             )}
           </button>

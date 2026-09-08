@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Satellite,
   CloudRain,
-  Sparkles,
+  LineChart,
   TrendingUp,
   UserCheck,
   Calendar,
@@ -66,7 +66,7 @@ export function FarmTimeline({ farmId }: FarmTimelineProps) {
       return <CloudRain className="w-3.5 h-3.5 text-sky-600" />;
     }
     if (key.includes("prediction")) {
-      return <Sparkles className="w-3.5 h-3.5 text-emerald-700" />;
+      return <LineChart className="w-3.5 h-3.5 text-emerald-700" />;
     }
     if (key.includes("recommendation")) {
       return <TrendingUp className="w-3.5 h-3.5 text-amber-600" />;
