@@ -588,6 +588,9 @@ class FarmTimelineEventResponse(BaseModel):
     description: str
     severity: str
     timestamp: datetime
+    category: Optional[str] = None
+    impact_level: Optional[str] = None
+    event_date: Optional[str] = None
 
     class Config:
         from_attributes = True

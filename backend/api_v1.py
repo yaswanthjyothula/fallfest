@@ -1658,7 +1658,45 @@ def get_farm_decision_timeline(farm_id: int, db: Session = Depends(get_db)):
         db.commit()
         events = demo_events
 
-    return events
+    res = []
+    for e in events:
+        ev_type = (e.event_type or "").upper()
+        if "MANAGEMENT" in ev_type:
+            cat = "management"
+        elif "SATELLITE" in ev_type:
+            cat = "satellite"
+        elif "WEATHER" in ev_type:
+            cat = "weather"
+        elif "PREDICTION" in ev_type:
+            cat = "prediction"
+        else:
+            cat = "recommendation"
+
+        sev = (e.severity or "").upper()
+        if sev in ["WARNING", "HIGH", "ELEVATED"]:
+            imp = "high"
+        elif sev in ["INFO", "MODERATE"]:
+            imp = "moderate"
+        else:
+            imp = "low"
+
+        dt_str = e.timestamp.strftime("%b %d, %Y") if hasattr(e.timestamp, "strftime") else str(e.timestamp)[:10]
+
+        res.append(
+            schemas.FarmTimelineEventResponse(
+                id=e.id,
+                farm_id=e.farm_id,
+                event_type=e.event_type,
+                title=e.title,
+                description=e.description,
+                severity=e.severity,
+                timestamp=e.timestamp,
+                category=cat,
+                impact_level=imp,
+                event_date=dt_str,
+            )
+        )
+    return res
 
 
 @router.post("/disease/detect", response_model=schemas.DiseaseDetectionResponse)

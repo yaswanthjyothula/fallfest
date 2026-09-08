@@ -50,6 +50,11 @@ export class ErrorBoundary extends Component<Props, State> {
               {this.props.fallbackMessage ||
                 "A telemetry or calculation service could not be loaded at this moment. You can retry the request or check network connectivity."}
             </p>
+            {this.state.error && (
+              <p className="text-[11px] text-rose-600 font-mono bg-rose-50 p-2 rounded max-w-lg mx-auto overflow-auto">
+                {this.state.error.message || String(this.state.error)}
+              </p>
+            )}
           </div>
           <div>
             <button
