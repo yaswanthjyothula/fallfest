@@ -610,3 +610,40 @@ class DiseaseDetectionResponse(BaseModel):
     detected_at: datetime
 
 
+class QuantumScenarioRequest(BaseModel):
+    farm_id: Optional[int] = 1
+    crop: str = "Winter Wheat"
+    nitrogen: float = Field(90.0, ge=10.0, le=300.0)
+    phosphorus: float = Field(42.0, ge=5.0, le=150.0)
+    potassium: float = Field(42.0, ge=5.0, le=150.0)
+    soil_moisture: float = Field(32.0, ge=5.0, le=95.0)
+    soil_ph: float = Field(6.8, ge=3.5, le=10.0)
+    rainfall: float = Field(450.0, ge=0.0, le=3000.0)
+    temperature: float = Field(24.0, ge=-10.0, le=55.0)
+    ndvi: float = Field(0.72, ge=0.0, le=1.0)
+    irrigation: float = Field(14.0, ge=0.0, le=300.0)
+    scenario_name: Optional[str] = "Precision Optimized Plan"
+    scenario_type: Optional[str] = "optimized"
+
+
+class QuantumScenarioResponse(BaseModel):
+    scenario_id: str
+    scenario_name: str
+    scenario_type: str
+    predicted_yield: float
+    predicted_yield_q_acre: float
+    prediction_range: Dict[str, float]
+    input_cost: float
+    water_requirement: float
+    risk: str
+    yield_change_pct: float
+    economic_estimate: Dict[str, float]
+    decision_score: float
+    decision_score_breakdown: Dict[str, float]
+    model_name: str
+    model_version: str
+    quantum_configuration: Dict[str, Any]
+    why_it_changed: List[Dict[str, Any]]
+    timestamp: datetime
+
+

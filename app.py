@@ -726,8 +726,12 @@ def render_dashboard_sidebar():
                 <div class="brand-icon-leaf">Q</div>
                 <div>
                     <div class="sidebar-brand-name">AgriQuantum</div>
-                    <div class="sidebar-brand-tag">Precision Agriculture Intelligence</div>
+                    <div class="sidebar-brand-tag">Quantum Control Center & Lab</div>
                 </div>
+            </div>
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 0.45rem 0.65rem; font-size: 0.72rem; color: #166534; margin-bottom: 0.85rem; line-height: 1.3;">
+                <b>Internal QML Engineering Lab</b><br>
+                Primary Application: <a href="http://localhost:3000" target="_blank" style="color: #15803d; font-weight: 600; text-decoration: underline;">localhost:3000</a>
             </div>
             """,
             unsafe_allow_html=True,

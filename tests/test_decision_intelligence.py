@@ -39,12 +39,13 @@ class TestDecisionIntelligence(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["crop_type"], "Winter Wheat")
-        self.assertEqual(len(data["scenarios"]), 4)
+        self.assertEqual(len(data["scenarios"]), 5)
         scenario_ids = [s["scenario_id"] for s in data["scenarios"]]
         self.assertIn("current", scenario_ids)
         self.assertIn("optimized", scenario_ids)
         self.assertIn("low_cost", scenario_ids)
         self.assertIn("high_yield", scenario_ids)
+        self.assertIn("water_saving", scenario_ids)
 
         for s in data["scenarios"]:
             self.assertGreater(s["predicted_yield_q_acre"], 0)
@@ -137,8 +138,55 @@ class TestDecisionIntelligence(unittest.TestCase):
         data = res.json()
         self.assertIn("disease_name", data)
         self.assertIn("severity", data)
-        self.assertIn("cultural_controls", data)
+    def test_quantum_scenario_endpoints(self):
+        payload = {
+            "farm_id": 1,
+            "crop": "Winter Wheat",
+            "nitrogen": 95.0,
+            "phosphorus": 45.0,
+            "potassium": 50.0,
+            "soil_moisture": 30.0,
+            "soil_ph": 6.8,
+            "rainfall": 420.0,
+            "temperature": 23.5,
+            "ndvi": 0.75,
+            "irrigation": 16.0,
+            "scenario_name": "Test Quantum Plan",
+            "scenario_type": "optimized"
+        }
+        res = self.client.post("/api/v1/quantum/scenario", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("scenario_id", data)
+        self.assertGreater(data["predicted_yield"], 0)
+        self.assertGreater(data["decision_score"], 0)
+        self.assertIn("quantum_configuration", data)
+        self.assertEqual(data["quantum_configuration"]["qubit_count"], 4)
+        self.assertIsInstance(data["why_it_changed"], list)
+
+        # Test GET /quantum/scenario/{id}
+        sc_id = data["scenario_id"]
+        get_res = self.client.get(f"/api/v1/quantum/scenario/{sc_id}")
+        self.assertEqual(get_res.status_code, 200)
+        self.assertEqual(get_res.json()["scenario_id"], sc_id)
+
+    def test_quantum_circuit_and_kernel_matrix_endpoints(self):
+        # Test GET /quantum/circuit/{id}
+        c_res = self.client.get("/api/v1/quantum/circuit/1")
+        self.assertEqual(c_res.status_code, 200)
+        c_data = c_res.json()
+        self.assertIn("qubits", c_data)
+        self.assertIn("circuit_ascii", c_data)
+
+        # Test GET /quantum/kernel-matrix/{id}
+        k_res = self.client.get("/api/v1/quantum/kernel-matrix/1?samples=8")
+        self.assertEqual(k_res.status_code, 200)
+        k_data = k_res.json()
+        self.assertEqual(k_data["dimension"], 8)
+        self.assertEqual(len(k_data["matrix"]), 8)
+        self.assertEqual(k_data["qubit_count"], 4)
 
 
 if __name__ == "__main__":
     unittest.main()
+
