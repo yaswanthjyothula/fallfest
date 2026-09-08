@@ -908,13 +908,13 @@ def get_quantum_scenario_by_id(scenario_id: str):
 
 
 @router.get("/quantum/kernel-matrix/{prediction_id}", response_model=schemas.QuantumKernelMatrixResponse)
-def get_quantum_kernel_matrix_by_prediction(prediction_id: int, samples: int = 16):
+def get_quantum_kernel_matrix_by_prediction(prediction_id: str = "default", samples: int = 16):
     """Returns the real-time Quantum Kernel Gram matrix for the prediction context."""
     return get_typed_quantum_kernel_matrix(samples=samples)
 
 
 @router.get("/quantum/circuit/{prediction_id}")
-def get_quantum_circuit_by_prediction(prediction_id: int):
+def get_quantum_circuit_by_prediction(prediction_id: str = "default"):
     """Returns circuit layout, qubit count, gates, depth, and ASCII diagram."""
     return get_quantum_circuit_spec()
 
