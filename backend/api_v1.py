@@ -11,7 +11,7 @@ import json
 from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Response, Query
 from fastapi.responses import StreamingResponse
 import io
 from sqlalchemy.orm import Session
@@ -27,6 +27,14 @@ from backend.auth import (
 )
 from backend.security import log_audit_event
 from backend.services.weather_service import get_farm_weather
+from backend.services.visual_crossing_service import (
+    get_visual_crossing_service,
+    WeatherValidationError,
+    WeatherServiceTimeoutError,
+    WeatherServiceRateLimitError,
+    WeatherServiceAPIError,
+    WeatherServiceError,
+)
 from backend.services.satellite_service import CopernicusSentinelService
 from backend.services.report_service import generate_certified_pdf, generate_report_text
 from backend.services.supabase_service import get_supabase_status, sync_prediction_to_supabase
@@ -340,30 +348,142 @@ def generate_recommendations(
 
 
 # ==============================================================================
-# WEATHER & SATELLITE INTEGRATIONS
+# VISUAL CROSSING & AGRO-METEOROLOGICAL WEATHER INTEGRATIONS
 # ==============================================================================
+@router.get("/weather/current", response_model=schemas.CurrentWeatherResponse)
+def get_current_weather_endpoint(
+    latitude: float = Query(..., description="Latitude in decimal degrees (-90 to 90)"),
+    longitude: float = Query(..., description="Longitude in decimal degrees (-180 to 180)"),
+):
+    """Retrieves real-time agro-meteorological observations from Visual Crossing Weather API."""
+    service = get_visual_crossing_service()
+    try:
+        data = service.get_current_weather(latitude, longitude)
+        return data
+    except WeatherValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except WeatherServiceRateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except WeatherServiceTimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except WeatherServiceError as e:
+        raise HTTPException(status_code=502, detail="Weather provider error: unable to retrieve current weather.")
+
+
+@router.get("/weather/forecast", response_model=schemas.ForecastWeatherResponse)
+def get_weather_forecast_endpoint(
+    latitude: float = Query(..., description="Latitude in decimal degrees (-90 to 90)"),
+    longitude: float = Query(..., description="Longitude in decimal degrees (-180 to 180)"),
+    days: int = Query(7, ge=1, le=15, description="Number of forecast days (1 to 15)"),
+):
+    """Retrieves up to 15 days of agricultural weather forecast from Visual Crossing Weather API."""
+    service = get_visual_crossing_service()
+    try:
+        data = service.get_forecast_weather(latitude, longitude, days=days)
+        return data
+    except WeatherValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except WeatherServiceRateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except WeatherServiceTimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except WeatherServiceError as e:
+        raise HTTPException(status_code=502, detail="Weather provider error: unable to retrieve forecast weather.")
+
+
+@router.get("/weather/history", response_model=schemas.HistoricalWeatherResponse)
+def get_weather_history_endpoint(
+    latitude: float = Query(..., description="Latitude in decimal degrees (-90 to 90)"),
+    longitude: float = Query(..., description="Longitude in decimal degrees (-180 to 180)"),
+    start_date: str = Query(..., description="Start date in YYYY-MM-DD format"),
+    end_date: str = Query(..., description="End date in YYYY-MM-DD format"),
+):
+    """Retrieves historical weather records between start_date and end_date from Visual Crossing."""
+    service = get_visual_crossing_service()
+    try:
+        data = service.get_historical_weather(latitude, longitude, start_date=start_date, end_date=end_date)
+        return data
+    except WeatherValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except WeatherServiceRateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except WeatherServiceTimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except WeatherServiceError as e:
+        raise HTTPException(status_code=502, detail="Weather provider error: unable to retrieve historical weather.")
+
+
+@router.get("/weather/farm/{farm_id}", response_model=schemas.FarmConsolidatedWeatherResponse)
+def get_farm_consolidated_weather_endpoint(
+    farm_id: int,
+    db: Session = Depends(get_db),
+):
+    """
+    Consolidated farm agricultural weather endpoint:
+    Returns current conditions, 7-day forecast, 7-day historical trend, and agricultural impacts.
+    Stores weather observation in the database.
+    """
+    service = get_visual_crossing_service()
+    try:
+        data = service.get_farm_weather(farm_id=farm_id, db=db, persist=True)
+        return data
+    except WeatherValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except WeatherServiceRateLimitError as e:
+        raise HTTPException(status_code=429, detail=str(e))
+    except WeatherServiceTimeoutError as e:
+        raise HTTPException(status_code=504, detail=str(e))
+    except WeatherServiceError as e:
+        raise HTTPException(status_code=502, detail="Weather provider error: unable to retrieve farm weather.")
+
+
 @router.get("/weather/{farm_id}", response_model=schemas.WeatherResponse)
 async def get_live_weather(farm_id: int, db: Session = Depends(get_db)):
-    """Retrieves live meteorological conditions from Open-Meteo for the farm's coordinates."""
+    """Retrieves live meteorological conditions from Visual Crossing for the farm's coordinates."""
     farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-    lat = farm.latitude if farm else 16.5062
-    lon = farm.longitude if farm else 80.6480
+    lat = farm.latitude if farm else 30.9010
+    lon = farm.longitude if farm else 75.8573
     name = farm.name if farm else "Green Valley Farm"
 
-    weather_data = await get_farm_weather(latitude=lat, longitude=lon, farm_name=name)
-
-    return schemas.WeatherResponse(
-        farm_id=farm_id,
-        location=weather_data["location"],
-        latitude=weather_data["latitude"],
-        longitude=weather_data["longitude"],
-        current_temperature_c=weather_data["current_temperature_c"],
-        current_rainfall_mm=weather_data["current_rainfall_mm"],
-        relative_humidity_pct=weather_data["relative_humidity_pct"],
-        forecast_days=weather_data["forecast_days"],
-        source=weather_data["source"],
-        retrieved_at=datetime.utcnow(),
-    )
+    service = get_visual_crossing_service()
+    try:
+        cur = service.get_current_weather(lat, lon)
+        fore = service.get_forecast_weather(lat, lon, days=7)
+        return schemas.WeatherResponse(
+            farm_id=farm_id,
+            location=cur.get("resolved_address", name),
+            latitude=lat,
+            longitude=lon,
+            current_temperature_c=cur["temperature_c"],
+            current_rainfall_mm=cur["precipitation_mm"],
+            relative_humidity_pct=cur["humidity_pct"],
+            forecast_days=[
+                {
+                    "date": d["date"],
+                    "temp_max_c": d["temp_max_c"],
+                    "temp_min_c": d["temp_min_c"],
+                    "precipitation_mm": d["precipitation_mm"],
+                }
+                for d in fore.get("forecast", [])
+            ],
+            source="Visual Crossing",
+            retrieved_at=datetime.utcnow(),
+        )
+    except Exception:
+        # Graceful fallback to cached Open-Meteo
+        weather_data = await get_farm_weather(latitude=lat, longitude=lon, farm_name=name)
+        return schemas.WeatherResponse(
+            farm_id=farm_id,
+            location=weather_data["location"],
+            latitude=weather_data["latitude"],
+            longitude=weather_data["longitude"],
+            current_temperature_c=weather_data["current_temperature_c"],
+            current_rainfall_mm=weather_data["current_rainfall_mm"],
+            relative_humidity_pct=weather_data["relative_humidity_pct"],
+            forecast_days=weather_data["forecast_days"],
+            source=weather_data["source"],
+            retrieved_at=datetime.utcnow(),
+        )
 
 
 @router.get("/satellite/{field_id}", response_model=schemas.SatelliteCropHealthResponse)

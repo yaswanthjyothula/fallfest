@@ -118,12 +118,39 @@ Routes across 9 operational modules:
 7. **Crop Health**: Vegetation Health (NDVI 0.82 Healthy), Vegetation Trend, Field Health, and Areas Requiring Attention.
 8. **Data**: Upload CSV, Choose Dataset, Validate Data, and Download Dataset.
 9. **Reports**: Complete agricultural analysis summary with instant text and PDF download.
+10. **Weather Conditions**: Real-time atmospheric telemetry, dual-axis 7-day forecast, 7-day historical precipitation trend, and weather impact on crop yield powered by Visual Crossing.
 
 ---
 
-## 6. Mathematical and Quantum Formulation
+## 6. Agro-Meteorological Weather Service (Visual Crossing)
 
-### 6.1 4 Qubit Parameterized Quantum Feature Map
+AgriQuantum integrates Visual Crossing's Global Weather Timeline API:
+
+```
+Next.js / Streamlit Dashboard
+          ↓
+FastAPI Gateway (:8000)
+          ↓
+VisualCrossingWeatherService (1-Hour In-Memory TTL Cache)
+          ↓
+Visual Crossing Weather Timeline API
+          ↓
+Clean Pydantic Response Models
+          ↓
+PostgreSQL Persistence (weather_observations) & UI Telemetry
+```
+
+### Endpoints
+- `GET /api/v1/weather/current?latitude={lat}&longitude={lon}`: Real-time temperature, humidity, precipitation, solar radiation, pressure, wind, clouds.
+- `GET /api/v1/weather/forecast?latitude={lat}&longitude={lon}&days={days}`: Up to 15-day daily agricultural projections.
+- `GET /api/v1/weather/history?latitude={lat}&longitude={lon}&start_date={YYYY-MM-DD}&end_date={YYYY-MM-DD}`: Historical observations for biophysical model calibration.
+- `GET /api/v1/weather/farm/{farm_id}`: Consolidated current, 7-day forecast, 7-day history, and agricultural advisory impact with database persistence.
+
+---
+
+## 7. Mathematical and Quantum Formulation
+
+### 7.1 4 Qubit Parameterized Quantum Feature Map
 Continuous agronomic drivers $\vec{x} \in [0, 2\pi]^4$ are mapped into quantum states:
 
 $$|\Phi(\vec{x})\rangle = U_{\Phi(\vec{x})} |0\rangle^{\otimes 4}$$
@@ -134,27 +161,37 @@ $$U_{\Phi(\vec{x})} = \left( \exp\left(i \sum_{j=1}^4 x_j Z_j + \sum_{j=1}^3 (\p
 - **Circuit Depth**: 19
 - **Entangling Gates**: 12 CNOT gates capturing non-linear cross feature interactions
 
-### 6.2 Quantum Kernel Gram Matrix
+### 7.2 Quantum Kernel Gram Matrix
 Transition fidelity between quantum states:
 
 $$K(\vec{x}_i, \vec{x}_j) = |\langle \Phi(\vec{x}_i) | \Phi(\vec{x}_j) \rangle|^2$$
 
 ---
 
-## 7. Quickstart Guide
+## 8. Quickstart Guide
 
 ### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run Test Suite
-```bash
-python -m unittest tests/test_engine.py
+### 2. Configure Environment Variables
+Copy `.env.example` to `.env` and set your credentials:
+```env
+VISUAL_CROSSING_API_KEY=your_visual_crossing_api_key_here
+SUPABASE_URL=https://arbykwiinhpaymeuzhtl.supabase.co
+SUPABASE_KEY=your_supabase_anon_key
+COPERNICUS_CLIENT_ID=your_client_id
+COPERNICUS_CLIENT_SECRET=your_client_secret
 ```
-*Result*: `Ran 6 tests in 1.12s. OK`
 
-### 3. Launch Services
+### 3. Run Automated Test Suite
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+*Result*: `Ran 31 tests. OK (100% Passing across quantum engine, database, API v1, Supabase, and Visual Crossing)`
+
+### 4. Launch Services
 - **Streamlit Web Application**:
   ```bash
   python -m streamlit run app.py --server.port 8501

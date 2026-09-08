@@ -209,8 +209,94 @@ class WeatherResponse(BaseModel):
     current_rainfall_mm: float
     relative_humidity_pct: float
     forecast_days: List[Dict[str, Any]]
-    source: str = "Open-Meteo"
+    source: str = "Visual Crossing"
     retrieved_at: datetime
+
+
+class CurrentWeatherResponse(BaseModel):
+    latitude: float
+    longitude: float
+    resolved_address: str
+    timezone: str
+    observed_at: str
+    timestamp: str
+    temperature_c: float
+    feels_like_c: float
+    humidity_pct: float
+    dew_point_c: float
+    precipitation_mm: float
+    precip_prob_pct: float
+    wind_speed_kmh: float
+    wind_gust_kmh: Optional[float] = None
+    wind_direction_deg: float
+    pressure_hpa: float
+    cloud_coverage_pct: float
+    solar_radiation_wm2: float
+    uv_index: float
+    visibility_km: float
+    conditions: str
+    weather_provider: str = "Visual Crossing Weather API"
+    cached: bool = False
+
+
+class ForecastDayResponse(BaseModel):
+    date: str
+    temp_max_c: float
+    temp_min_c: float
+    temp_mean_c: float
+    precipitation_mm: float
+    precip_prob_pct: float
+    humidity_pct: float
+    solar_radiation_wm2: float
+    wind_speed_kmh: float
+    cloud_cover_pct: float
+    conditions: str
+    description: str
+
+
+class ForecastWeatherResponse(BaseModel):
+    latitude: float
+    longitude: float
+    resolved_address: str
+    forecast_days_count: int
+    forecast: List[ForecastDayResponse]
+    weather_provider: str = "Visual Crossing Weather API"
+    cached: bool = False
+
+
+class HistoricalWeatherDayResponse(BaseModel):
+    date: str
+    temp_max_c: float
+    temp_min_c: float
+    temp_mean_c: float
+    precipitation_mm: float
+    humidity_pct: float
+    solar_radiation_wm2: float
+    wind_speed_kmh: float
+    conditions: str
+
+
+class HistoricalWeatherResponse(BaseModel):
+    latitude: float
+    longitude: float
+    start_date: str
+    end_date: str
+    records_count: int
+    history: List[HistoricalWeatherDayResponse]
+    weather_provider: str = "Visual Crossing Weather API"
+    cached: bool = False
+
+
+class FarmConsolidatedWeatherResponse(BaseModel):
+    farm_id: int
+    farm_name: str
+    latitude: float
+    longitude: float
+    current: CurrentWeatherResponse
+    forecast: List[ForecastDayResponse]
+    history_7d: List[HistoricalWeatherDayResponse]
+    summary: Dict[str, Any]
+    weather_provider: str = "Visual Crossing Weather API"
 
 
 class SatelliteCropHealthResponse(BaseModel):

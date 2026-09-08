@@ -34,6 +34,7 @@ from core.recommender import PrecisionAgronomyRecommender
 from backend.database import init_db, SessionLocal
 from backend import models
 from backend.services.weather_service import get_farm_weather_sync
+from backend.services.visual_crossing_service import get_visual_crossing_service
 from backend.services.satellite_service import CopernicusSentinelService
 from backend.services.report_service import generate_certified_pdf, generate_report_text
 from backend.services.supabase_service import get_supabase_status, sync_prediction_to_supabase
@@ -731,6 +732,7 @@ def render_dashboard_sidebar():
         st.markdown("<div class='sidebar-group-label'>Core Operations</div>", unsafe_allow_html=True)
         core_ops = [
             ("Overview", "Overview"),
+            ("Weather Conditions", "Weather Conditions"),
             ("Yield Prediction", "Yield Prediction"),
             ("Farm Analysis", "Farm Analysis"),
             ("Recommendations", "Recommendations"),
@@ -1430,6 +1432,316 @@ elif st.session_state.app_view == "dashboard":
                 """,
                 unsafe_allow_html=True,
             )
+
+    # ==========================================================================
+    # TAB: WEATHER CONDITIONS (VISUAL CROSSING AGRO-METEOROLOGICAL INTELLIGENCE)
+    # ==========================================================================
+    elif active_tab == "Weather Conditions":
+        st.markdown(
+            """
+            <div class="content-panel">
+                <div class="panel-header-title">Weather Conditions & Agro-Meteorological Intelligence</div>
+                <div class="panel-header-desc">
+                    Real-time atmospheric telemetry, agricultural forecasts, and historical moisture analysis powered by Visual Crossing.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        vc_service = get_visual_crossing_service()
+
+        if not vc_service.is_configured():
+            st.warning(
+                "Visual Crossing API key is not configured in `.env`. "
+                "Please add `VISUAL_CROSSING_API_KEY=your_key` to view live atmospheric data."
+            )
+        else:
+            # Map selected farm to coordinates
+            farm_coords = {
+                "Green Valley Farm": (30.9010, 75.8573, "Punjab Agricultural Belt"),
+                "Coastal Alluvial Basin": (16.5062, 80.6480, "Krishna-Godavari Delta"),
+                "Deccan Semi-Arid Plot": (17.3850, 78.4867, "Deccan Plateau"),
+            }
+            sel_farm = st.session_state.get("selected_farm", "Green Valley Farm")
+            lat_f, lon_f, loc_desc = farm_coords.get(sel_farm, (30.9010, 75.8573, "Punjab Belt"))
+
+            with st.spinner("Fetching live agro-meteorological telemetry from Visual Crossing..."):
+                try:
+                    farm_weather = vc_service.get_farm_weather(farm_id=1)
+                    cur_w = farm_weather.get("current", {})
+                    fore_w = farm_weather.get("forecast", [])
+                    hist_w = farm_weather.get("history_7d", [])
+                    summary_w = farm_weather.get("summary", {})
+                except Exception as _e:
+                    st.error(f"Weather retrieval error: {str(_e)}")
+                    cur_w, fore_w, hist_w, summary_w = {}, [], [], {}
+
+            if cur_w:
+                # Top KPI Row for Weather Conditions
+                col_w1, col_w2, col_w3, col_w4, col_w5, col_w6 = st.columns(6, gap="small")
+                with col_w1:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Temperature</div>
+                            <div class="kpi-main-number">{cur_w.get('temperature_c', 25.0)} °C</div>
+                            <div class="kpi-delta-tag status-positive">Feels {cur_w.get('feels_like_c', 25.0)} °C</div>
+                            <div class="kpi-subtext-note">{cur_w.get('conditions', 'Clear')}</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col_w2:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Precipitation</div>
+                            <div class="kpi-main-number">{cur_w.get('precipitation_mm', 0.0)} mm</div>
+                            <div class="kpi-delta-tag status-neutral">Prob: {cur_w.get('precip_prob_pct', 0.0)}%</div>
+                            <div class="kpi-subtext-note">Daily observed</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col_w3:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Relative Humidity</div>
+                            <div class="kpi-main-number">{cur_w.get('humidity_pct', 50.0)}%</div>
+                            <div class="kpi-delta-tag status-neutral">Dew: {cur_w.get('dew_point_c', 15.0)} °C</div>
+                            <div class="kpi-subtext-note">Vapor pressure</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col_w4:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Wind Speed</div>
+                            <div class="kpi-main-number">{cur_w.get('wind_speed_kmh', 10.0)} km/h</div>
+                            <div class="kpi-delta-tag status-neutral">Dir: {int(cur_w.get('wind_direction_deg', 0))}°</div>
+                            <div class="kpi-subtext-note">Canopy drift</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col_w5:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Solar Radiation</div>
+                            <div class="kpi-main-number">{int(cur_w.get('solar_radiation_wm2', 200.0))} W/m²</div>
+                            <div class="kpi-delta-tag status-positive">UV Index: {cur_w.get('uv_index', 5.0)}</div>
+                            <div class="kpi-subtext-note">Photosynthetic flux</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with col_w6:
+                    st.markdown(
+                        f"""
+                        <div class="kpi-card-metric">
+                            <div class="kpi-title-label">Pressure & Cloud</div>
+                            <div class="kpi-main-number">{int(cur_w.get('pressure_hpa', 1013))} hPa</div>
+                            <div class="kpi-delta-tag status-neutral">Clouds: {int(cur_w.get('cloud_coverage_pct', 0))}%</div>
+                            <div class="kpi-subtext-note">Barometric trend</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+
+                # Charts Row: 7-Day Forecast & 7-Day Historical Trend
+                col_wc_l, col_wc_r = st.columns([1.15, 1.0], gap="medium")
+
+                with col_wc_l:
+                    st.markdown(
+                        """
+                        <div class="content-panel">
+                            <div class="panel-header-title">7-Day Agro-Meteorological Forecast</div>
+                            <div class="panel-header-desc">Temperature bounds and daily precipitation projections.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if fore_w:
+                        fore_dates = [d["date"] for d in fore_w]
+                        fore_tmax = [d["temp_max_c"] for d in fore_w]
+                        fore_tmin = [d["temp_min_c"] for d in fore_w]
+                        fore_rain = [d["precipitation_mm"] for d in fore_w]
+
+                        fig_fore = go.Figure()
+                        # Precipitation Bars on Secondary Y
+                        fig_fore.add_trace(
+                            go.Bar(
+                                x=fore_dates,
+                                y=fore_rain,
+                                name="Rainfall (mm)",
+                                marker_color="#93C5FD",
+                                yaxis="y2",
+                                opacity=0.8,
+                            )
+                        )
+                        # Temperature Max Line
+                        fig_fore.add_trace(
+                            go.Scatter(
+                                x=fore_dates,
+                                y=fore_tmax,
+                                name="Max Temp (°C)",
+                                mode="lines+markers",
+                                line=dict(color="#EF4444", width=2.5),
+                            )
+                        )
+                        # Temperature Min Line
+                        fig_fore.add_trace(
+                            go.Scatter(
+                                x=fore_dates,
+                                y=fore_tmin,
+                                name="Min Temp (°C)",
+                                mode="lines+markers",
+                                line=dict(color="#3B82F6", width=2, dash="dash"),
+                            )
+                        )
+                        fig_fore.update_layout(
+                            height=320,
+                            margin=dict(l=30, r=35, t=20, b=35),
+                            paper_bgcolor="#FFFFFF",
+                            plot_bgcolor="#FFFFFF",
+                            font=dict(family="Inter", color="#4B5563", size=11),
+                            legend=dict(orientation="h", y=1.1, x=1, xanchor="right"),
+                            xaxis=dict(title="Forecast Date", gridcolor="#F3F4F6"),
+                            yaxis=dict(title="Temperature (°C)", gridcolor="#F3F4F6", side="left"),
+                            yaxis2=dict(title="Precipitation (mm)", overlaying="y", side="right", showgrid=False),
+                        )
+                        st.plotly_chart(fig_fore, width="stretch", config={"displayModeBar": False})
+                    else:
+                        st.info("No forecast data available.")
+
+                with col_wc_r:
+                    st.markdown(
+                        """
+                        <div class="content-panel">
+                            <div class="panel-header-title">Past 7-Day Observed Rainfall & Temperature</div>
+                            <div class="panel-header-desc">Recent moisture accumulation and thermal progression.</div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                    if hist_w:
+                        hist_dates = [d["date"] for d in hist_w]
+                        hist_rain = [d["precipitation_mm"] for d in hist_w]
+                        hist_tmean = [d["temp_mean_c"] for d in hist_w]
+
+                        fig_hist = go.Figure()
+                        fig_hist.add_trace(
+                            go.Bar(
+                                x=hist_dates,
+                                y=hist_rain,
+                                name="Rainfall (mm)",
+                                marker_color="#10B981",
+                                yaxis="y2",
+                                opacity=0.85,
+                            )
+                        )
+                        fig_hist.add_trace(
+                            go.Scatter(
+                                x=hist_dates,
+                                y=hist_tmean,
+                                name="Mean Temp (°C)",
+                                mode="lines+markers",
+                                line=dict(color="#138A4B", width=2.5),
+                            )
+                        )
+                        fig_hist.update_layout(
+                            height=320,
+                            margin=dict(l=30, r=35, t=20, b=35),
+                            paper_bgcolor="#FFFFFF",
+                            plot_bgcolor="#FFFFFF",
+                            font=dict(family="Inter", color="#4B5563", size=11),
+                            legend=dict(orientation="h", y=1.1, x=1, xanchor="right"),
+                            xaxis=dict(title="Date", gridcolor="#F3F4F6"),
+                            yaxis=dict(title="Mean Temperature (°C)", gridcolor="#F3F4F6", side="left"),
+                            yaxis2=dict(title="Rainfall (mm)", overlaying="y", side="right", showgrid=False),
+                        )
+                        st.plotly_chart(fig_hist, width="stretch", config={"displayModeBar": False})
+                    else:
+                        st.info("Historical data is synchronizing with Visual Crossing archive.")
+
+                st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+
+                # Weather Impact on Yield Section
+                st.markdown(
+                    """
+                    <div class="content-panel">
+                        <div class="panel-header-title">Weather Impact on Crop Yield</div>
+                        <div class="panel-header-desc">Automated agronomic decision support based on thermal and moisture conditions.</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+                col_imp_1, col_imp_2, col_imp_3 = st.columns(3, gap="medium")
+
+                with col_imp_1:
+                    st.markdown(
+                        f"""
+                        <div style="background:#F0FDF4; border:1px solid #A7F3D0; border-radius:8px; padding:1rem; height:100%;">
+                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#075B35;">Soil Moisture & Irrigation Need</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#075B35; margin:0.35rem 0;">
+                                {summary_w.get('forecast_rainfall_7d_mm', 0.0)} mm Projected
+                            </div>
+                            <div style="font-size:0.8rem; color:#374151; line-height:1.5;">
+                                {summary_w.get('precipitation_impact_advisory', 'Adequate moisture.')}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                with col_imp_2:
+                    st.markdown(
+                        f"""
+                        <div style="background:#F9FAFB; border:1px solid #E5E7EB; border-radius:8px; padding:1rem; height:100%;">
+                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#4B5563;">Thermal Accumulation</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:#111827; margin:0.35rem 0;">
+                                {cur_w.get('temperature_c', 25.0)} °C Average
+                            </div>
+                            <div style="font-size:0.8rem; color:#4B5563; line-height:1.5;">
+                                {summary_w.get('temperature_impact_advisory', 'Optimal thermal growth stage.')}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+
+                with col_imp_3:
+                    humidity_val = cur_w.get('humidity_pct', 50.0)
+                    if humidity_val > 70.0:
+                        pathogen_risk = "Elevated risk of foliar fungal pathogens (e.g. rust, blight). Preventive fungicide scouting advised."
+                        risk_tag = "Elevated Risk"
+                        risk_col = "#EF4444"
+                    else:
+                        pathogen_risk = "Favorable ambient atmospheric conditions. Low fungal spore germination pressure across canopy."
+                        risk_tag = "Low Risk"
+                        risk_col = "#10B981"
+
+                    st.markdown(
+                        f"""
+                        <div style="background:#FFFFFF; border:1px solid #E5E7EB; border-radius:8px; padding:1rem; height:100%;">
+                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#6B7280;">Disease & Pathogen Pressure</div>
+                            <div style="font-size:1.1rem; font-weight:800; color:{risk_col}; margin:0.35rem 0;">
+                                {risk_tag}
+                            </div>
+                            <div style="font-size:0.8rem; color:#4B5563; line-height:1.5;">
+                                {pathogen_risk}
+                            </div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
 
     # ==========================================================================
     # TAB: YIELD PREDICTION (MAJOR EXPERIENCE WITH DB PERSISTENCE)
