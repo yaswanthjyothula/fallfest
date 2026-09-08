@@ -16,6 +16,8 @@ import {
   Settings,
   HelpCircle,
   X,
+  Sliders,
+  Layers,
 } from "lucide-react";
 
 interface NavItem {
@@ -27,6 +29,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Yield Prediction", href: "/dashboard/predict", icon: Sparkles },
+  { name: "What-If Simulator", href: "/dashboard/scenarios", icon: Sliders },
+  { name: "Farm Digital Twin", href: "/dashboard/twin", icon: Layers },
   { name: "Farm Analysis", href: "/dashboard/farms", icon: MapPin },
   { name: "Recommendations", href: "/dashboard/recommendations", icon: TrendingUp },
   { name: "Quantum Analysis", href: "/dashboard/quantum", icon: Atom },

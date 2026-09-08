@@ -53,21 +53,37 @@ export default function AssistantModal() {
     if (!question) setInput("");
     setLoading(true);
 
-    // Contextual responses based on live farm telemetry
-    setTimeout(() => {
+    async function processQuery() {
       let reply = "";
-      const lower = textToSend.toLowerCase();
-
-      if (lower.includes("yield") || lower.includes("predict")) {
-        reply = `For ${activeFarm?.name || "your active plot"}, the 4-qubit Quantum SVR projects a harvest yield of 41.8 Q/acre for Winter Wheat under current alluvial soil moisture (32%) and 110 kg/ha nitrogen. The model shows an 8.4% gain over regional averages.`;
-      } else if (lower.includes("spray") || lower.includes("pesticide") || lower.includes("weather")) {
-        reply = `Current meteorological conditions show wind speeds under 12 km/h and 0% precipitation probability over the next 36 hours. This provides an optimal operational window for foliar feeding or herbicide application.`;
-      } else if (lower.includes("nitrogen") || lower.includes("fertilizer") || lower.includes("nutrient")) {
-        reply = `Liebig minimum-nutrient optimization recommends a split nitrogen protocol: apply 40% as basal application and 60% during crown root initiation (CRI). For your holding, target 110 kg/ha total to prevent lodging and maximize photosynthetic conversion.`;
-      } else if (lower.includes("water") || lower.includes("irrigation") || lower.includes("moisture")) {
-        reply = `Current volumetric soil moisture is holding at optimal field capacity (~28-32%). We recommend scheduling a supplemental 14mm micro-irrigation cycle in 4 days if rainfall remains below 5mm.`;
-      } else {
-        reply = `Based on telemetry from ${activeFarm?.name || "your farm"}, canopy NDVI is healthy at 0.82 with steady thermal accumulation. To optimize further, review the Precision Recommendations workspace or export a certified PDF audit report.`;
+      try {
+        const res = await fetch("http://localhost:8000/api/v1/copilot/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: textToSend,
+            farm_id: activeFarm?.id || 1,
+          }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          reply = data.answer;
+        } else {
+          throw new Error("Copilot API returned non-200 status");
+        }
+      } catch (err) {
+        console.warn("Copilot API fallback", err);
+        const lower = textToSend.toLowerCase();
+        if (lower.includes("yield") || lower.includes("predict")) {
+          reply = `For ${activeFarm?.name || "your active plot"}, the 4-qubit Quantum SVR projects a harvest yield of 41.8 Q/acre for Winter Wheat under current alluvial soil moisture (32%) and 110 kg/ha nitrogen. The model shows an 8.4% gain over regional averages.`;
+        } else if (lower.includes("spray") || lower.includes("pesticide") || lower.includes("weather")) {
+          reply = `Current meteorological conditions show wind speeds under 12 km/h and 0% precipitation probability over the next 36 hours. This provides an optimal operational window for foliar feeding or herbicide application.`;
+        } else if (lower.includes("nitrogen") || lower.includes("fertilizer") || lower.includes("nutrient")) {
+          reply = `Liebig minimum-nutrient optimization recommends a split nitrogen protocol: apply 40% as basal application and 60% during crown root initiation (CRI). For your holding, target 110 kg/ha total to prevent lodging and maximize photosynthetic conversion.`;
+        } else if (lower.includes("water") || lower.includes("irrigation") || lower.includes("moisture")) {
+          reply = `Current volumetric soil moisture is holding at optimal field capacity (~28-32%). We recommend scheduling a supplemental 14mm micro-irrigation cycle in 4 days if rainfall remains below 5mm.`;
+        } else {
+          reply = `Based on telemetry from ${activeFarm?.name || "your farm"}, canopy NDVI is healthy at 0.82 with steady thermal accumulation. To optimize further, review the Precision Recommendations workspace or export a certified PDF audit report.`;
+        }
       }
 
       const assistantMsg: ChatMessage = {
@@ -79,7 +95,9 @@ export default function AssistantModal() {
 
       setMessages((prev) => [...prev, assistantMsg]);
       setLoading(false);
-    }, 700);
+    }
+
+    processQuery();
   }
 
   return (

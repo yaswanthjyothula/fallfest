@@ -419,3 +419,194 @@ class PasswordResetConfirm(BaseModel):
     token: str
     new_password: str = Field(..., min_length=8)
 
+
+# ==============================================================================
+# DECISION INTELLIGENCE SCHEMAS
+# ==============================================================================
+
+class ScenarioResult(BaseModel):
+    scenario_id: str
+    scenario_name: str
+    description: str
+    nitrogen_kg_ha: float
+    phosphorus_kg_ha: float
+    potassium_kg_ha: float
+    moisture_pct: float
+    irrigation_mm: float
+    predicted_yield_q_acre: float
+    predicted_yield_t_ha: float
+    input_cost_inr_acre: float
+    estimated_revenue_inr_acre: float
+    net_profit_inr_acre: float
+    savings_vs_baseline_inr_acre: float
+    water_stress_index: float  # 0 to 1
+    risk_tier: str  # Low, Moderate, High
+
+
+class WhatIfSimulationRequest(BaseModel):
+    crop_type: str = "Winter Wheat"
+    cultivated_area_hectares: float = 120.0
+    current_nitrogen: float = 85.0
+    current_phosphorus: float = 45.0
+    current_potassium: float = 55.0
+    current_moisture: float = 24.0
+    current_rainfall: float = 420.0
+    current_ndvi: float = 0.68
+    temperature: float = 24.5
+    soil_ph: float = 6.8
+
+
+class WhatIfSimulationResponse(BaseModel):
+    crop_type: str
+    area_hectares: float
+    scenarios: List[ScenarioResult]
+    recommended_scenario_id: str
+    computed_at: datetime
+
+
+class FeatureAttribution(BaseModel):
+    feature_name: str
+    unit: str
+    current_value: float
+    influence_score: float  # Percentage contribution (0 to 100)
+    influence_level: str  # High, Moderate, Low
+    effect_direction: str  # Positive, Negative, Neutral
+    rationale: str
+
+
+class SensitivityCurve(BaseModel):
+    feature_name: str
+    unit: str
+    curve_points: List[Dict[str, float]]  # [{"x": value, "predicted_yield": yield}]
+
+
+class ExplainabilityResponse(BaseModel):
+    prediction_id: Optional[int] = None
+    predicted_yield_q_acre: float
+    confidence_score: float
+    quantum_kernel_dimension: int
+    top_factors: List[FeatureAttribution]
+    sensitivity_curves: List[SensitivityCurve]
+    technical_explanation: str
+    evaluated_at: datetime
+
+
+class RiskFactor(BaseModel):
+    category: str  # Water Stress, Thermal Risk, Canopy Vigor, Yield Variability, Nutrient Imbalance
+    score: float  # 0 to 100
+    risk_level: str  # Low, Moderate, High, Critical, Insufficient Data
+    headline: str
+    explanation: str
+    mitigation_action: str
+
+
+class FarmRiskOutlookResponse(BaseModel):
+    farm_id: int
+    farm_name: str
+    overall_risk_score: float  # 0 to 100
+    overall_risk_level: str  # Low, Moderate, High, Critical
+    risk_factors: List[RiskFactor]
+    data_freshness: str
+    evaluated_at: datetime
+
+
+class DigitalTwinResponse(BaseModel):
+    farm_id: int
+    farm_name: str
+    location: str
+    state: Optional[str] = None
+    country: str = "India"
+    latitude: float
+    longitude: float
+    total_area_hectares: float
+    crop: str
+    variety: str
+    growth_stage: str
+    soil_type: str
+    mean_ph: float
+    mean_nitrogen_kg_ha: float
+    mean_moisture_pct: float
+    current_weather: Dict[str, Any]
+    current_ndvi: float
+    historical_yield_trend: List[Dict[str, Any]]
+    active_risk_level: str
+    active_risk_score: float
+    latest_prediction_q_acre: Optional[float] = None
+    latest_recommendation_benefit_inr: Optional[float] = None
+    boundary_coordinates: Optional[List[List[float]]] = None
+
+
+class CopilotQueryRequest(BaseModel):
+    farm_id: int = 1
+    query: str
+
+
+class CopilotQueryResponse(BaseModel):
+    query: str
+    answer: str
+    sources_used: List[str]
+    confidence: float
+    context_timestamp: str
+
+
+class HarvestRecordCreate(BaseModel):
+    farm_id: int
+    field_id: Optional[int] = None
+    season_year: str
+    crop_name: str
+    predicted_yield: float
+    actual_yield: float
+    actual_nitrogen: Optional[float] = None
+    actual_water_mm: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class HarvestRecordResponse(BaseModel):
+    id: int
+    farm_id: int
+    field_id: Optional[int] = None
+    season_year: str
+    crop_name: str
+    predicted_yield: float
+    actual_yield: float
+    error_pct: float
+    accuracy_pct: float
+    actual_nitrogen: Optional[float] = None
+    actual_water_mm: Optional[float] = None
+    notes: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class FarmTimelineEventResponse(BaseModel):
+    id: int
+    farm_id: int
+    event_type: str
+    title: str
+    description: str
+    severity: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DiseaseDetectionRequest(BaseModel):
+    field_id: int = 1
+    crop_name: str = "Winter Wheat"
+    image_base64: Optional[str] = None
+
+
+class DiseaseDetectionResponse(BaseModel):
+    field_id: int
+    crop_name: str
+    disease_name: str
+    confidence: float
+    severity: str
+    inspection_notes: str
+    cultural_controls: str
+    detected_at: datetime
+
+

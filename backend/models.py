@@ -55,6 +55,8 @@ class Farm(Base):
     fields = relationship("Field", back_populates="farm", cascade="all, delete-orphan")
     weather_records = relationship("WeatherObservation", back_populates="farm", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="farm")
+    harvest_records = relationship("HarvestRecord", back_populates="farm", cascade="all, delete-orphan")
+    timeline_events = relationship("FarmTimelineEvent", back_populates="farm", cascade="all, delete-orphan")
 
 
 class Field(Base):
@@ -73,6 +75,7 @@ class Field(Base):
     soil_measurements = relationship("SoilMeasurement", back_populates="field", cascade="all, delete-orphan")
     satellite_observations = relationship("SatelliteObservation", back_populates="field", cascade="all, delete-orphan")
     predictions = relationship("Prediction", back_populates="field")
+    disease_detections = relationship("DiseaseDetection", back_populates="field", cascade="all, delete-orphan")
 
 
 class Crop(Base):
@@ -287,3 +290,55 @@ class AuditLog(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
 
     user = relationship("User", back_populates="audit_logs")
+
+
+class HarvestRecord(Base):
+    __tablename__ = "harvest_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id", ondelete="SET NULL"), nullable=True)
+    season_year = Column(String(50), nullable=False, index=True)  # e.g., "Rabi 2025", "Kharif 2024"
+    crop_name = Column(String(100), nullable=False)
+    predicted_yield = Column(Float, nullable=False)  # Quintals/acre
+    actual_yield = Column(Float, nullable=False)  # Quintals/acre
+    error_pct = Column(Float, nullable=False)  # Absolute percentage error
+    actual_nitrogen = Column(Float, nullable=True)  # kg/ha
+    actual_water_mm = Column(Float, nullable=True)  # mm
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    farm = relationship("Farm", back_populates="harvest_records")
+
+
+class FarmTimelineEvent(Base):
+    __tablename__ = "farm_timeline_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True)  # SATELLITE_PASS, WEATHER_ALERT, PREDICTION_RUN, RECOMMENDATION_ISSUED, MANAGEMENT_ACTION
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    severity = Column(String(20), default="INFO", nullable=False)  # INFO, SUCCESS, WARNING, CRITICAL
+    event_metadata_json = Column(Text, nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    farm = relationship("Farm", back_populates="timeline_events")
+
+
+class DiseaseDetection(Base):
+    __tablename__ = "disease_detections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
+    crop_name = Column(String(100), nullable=False)
+    disease_name = Column(String(150), nullable=False)
+    confidence = Column(Float, nullable=False)  # e.g. 0.94
+    severity = Column(String(50), default="Mild", nullable=False)  # Healthy, Mild, Moderate, Severe
+    inspection_notes = Column(Text, nullable=False)
+    cultural_controls = Column(Text, nullable=False)
+    image_url = Column(String(500), nullable=True)
+    detected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    field = relationship("Field", back_populates="disease_detections")
+
