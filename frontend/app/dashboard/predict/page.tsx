@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   FlaskConical,
   Info,
@@ -16,6 +17,7 @@ import {
   Cpu,
   Database,
   CloudSun,
+  Sprout,
 } from "lucide-react";
 import { api, YieldPredictionOutput } from "@/lib/api";
 import { useFarm } from "@/lib/FarmContext";
@@ -158,6 +160,33 @@ export default function YieldPredictionPage() {
     }
   }
 
+  if (farms.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-2xl p-10 border border-slate-200 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <Atom className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">No Farm Configured for Yield Prediction</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Add your farm holding to execute 4-Qubit Quantum SVR predictions based on your actual soil telemetry, weather observations, and Sentinel satellite vegetation vigor.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard/farms"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              <Sprout className="w-4 h-4" />
+              <span>Add My Farm</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -228,12 +257,12 @@ export default function YieldPredictionPage() {
               <div className="space-y-1">
                 <label className="font-semibold text-slate-700">Target Holding</label>
                 <select
-                  value={activeFarmId || 1}
-                  onChange={(e) => setActiveFarmId(Number(e.target.value))}
+                  value={activeFarmId || ""}
+                  onChange={(e) => e.target.value && setActiveFarmId(Number(e.target.value))}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-emerald-600 cursor-pointer font-medium text-slate-800"
                 >
                   {farms.length === 0 ? (
-                    <option value="1">Green Valley Station (120 ha)</option>
+                    <option value="">No farm registered yet (Add Farm First)</option>
                   ) : (
                     farms.map((f) => (
                       <option key={f.id} value={f.id}>

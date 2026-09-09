@@ -51,78 +51,15 @@ def init_db():
 
 
 def seed_initial_data():
-    """Seeds default verified farms, fields, model versions, and admin accounts if empty."""
+    """Seeds default active model version and verified test users if empty."""
     from backend import models
     from backend.auth import get_password_hash
 
     db = SessionLocal()
     try:
-        # 1. Seed Admin & Agronomist Users
-        admin_user = db.query(models.User).filter_by(email="admin@agriquantum.com").first()
-        if not admin_user:
-            admin_user = models.User(
-                email="admin@agriquantum.com",
-                hashed_password=get_password_hash("AgriQuantum2026!"),
-                full_name="Dr. Aris Thorne",
-                role="Administrator",
-            )
-            farmer_user = models.User(
-                email="farmer@greenvalley.com",
-                hashed_password=get_password_hash("FarmSecure2026!"),
-                full_name="Rajesh Patel",
-                role="Farmer",
-            )
-            db.add(admin_user)
-            db.add(farmer_user)
-            db.commit()
-            db.refresh(admin_user)
-            db.refresh(farmer_user)
-
-            # 2. Seed Default Verified Farms
-            farm_1 = models.Farm(
-                user_id=farmer_user.id,
-                name="Green Valley Agricultural Station",
-                location="Coastal Alluvial Basin (Zone 4B)",
-                state="Andhra Pradesh",
-                country="India",
-                latitude=16.5062,
-                longitude=80.6480,
-                total_area_hectares=120.0,
-            )
-            farm_2 = models.Farm(
-                user_id=farmer_user.id,
-                name="Deccan Precision Agro Center",
-                location="Semi-Arid Plateau (Zone 7A)",
-                state="Telangana",
-                country="India",
-                latitude=17.3850,
-                longitude=78.4867,
-                total_area_hectares=85.0,
-            )
-            db.add_all([farm_1, farm_2])
-            db.commit()
-            db.refresh(farm_1)
-            db.refresh(farm_2)
-
-            # 3. Seed Fields
-            field_1 = models.Field(
-                farm_id=farm_1.id,
-                name="Plot 101 - Alluvial Basin",
-                area_hectares=45.0,
-                soil_type="Alluvial Loam",
-                boundary_geojson='{"type":"Polygon","coordinates":[[[80.64,16.50],[80.66,16.50],[80.66,16.52],[80.64,16.52],[80.64,16.50]]]}',
-            )
-            field_2 = models.Field(
-                farm_id=farm_1.id,
-                name="Plot 102 - Riverine Terrace",
-                area_hectares=35.0,
-                soil_type="Sandy Clay Loam",
-                boundary_geojson='{"type":"Polygon","coordinates":[[[80.67,16.51],[80.69,16.51],[80.69,16.53],[80.67,16.53],[80.67,16.51]]]}',
-            )
-            db.add_all([field_1, field_2])
-            db.commit()
-
-            # 4. Seed Active Model Version
+        # 1. Seed Active Model Version
+        mv = db.query(models.ModelVersion).filter_by(version_tag="v2.5.0").first()
+        if not mv:
             mv = models.ModelVersion(
                 version_tag="v2.5.0",
                 model_name="AgriQuantum QSVR",
@@ -133,8 +70,37 @@ def seed_initial_data():
             db.add(mv)
             db.commit()
 
+        # 2. Seed Test Profile for Yaswanth
+        test_user = db.query(models.User).filter_by(email="test@gmail.com").first()
+        if not test_user:
+            test_user = models.User(
+                email="test@gmail.com",
+                hashed_password=get_password_hash("test123"),
+                full_name="Yaswanth",
+                role="Farmer",
+            )
+            db.add(test_user)
+            db.commit()
+        else:
+            if test_user.full_name != "Yaswanth":
+                test_user.full_name = "Yaswanth"
+                db.commit()
+
+        # 3. Seed Admin User
+        admin_user = db.query(models.User).filter_by(email="admin@agriquantum.com").first()
+        if not admin_user:
+            admin_user = models.User(
+                email="admin@agriquantum.com",
+                hashed_password=get_password_hash("AgriQuantum2026!"),
+                full_name="System Administrator",
+                role="Administrator",
+            )
+            db.add(admin_user)
+            db.commit()
+
     except Exception as e:
         db.rollback()
         print(f"Initial seed notice: {e}")
     finally:
         db.close()
+

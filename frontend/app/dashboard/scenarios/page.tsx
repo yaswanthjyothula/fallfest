@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useFarm } from "@/lib/FarmContext";
 import {
@@ -23,6 +24,7 @@ import {
   Binary,
   Layers,
   BarChart3,
+  Sprout,
 } from "lucide-react";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
@@ -47,7 +49,7 @@ interface ScenarioResult {
 }
 
 export default function ScenariosPage() {
-  const { activeFarm } = useFarm();
+  const { activeFarm, farms } = useFarm();
 
   // Controllable input states
   const [crop, setCrop] = useState("Winter Wheat");
@@ -278,6 +280,33 @@ export default function ScenariosPage() {
         )
       )
     : 92;
+
+  if (farms.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-2xl p-10 border border-slate-200 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <Sliders className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">No Farm Configured for What-If Simulation</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Add your farm holding to simulate N-P-K nutrient adjustments, irrigation scenarios, and economic profit variance.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard/farms"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              <Sprout className="w-4 h-4" />
+              <span>Add My Farm</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">

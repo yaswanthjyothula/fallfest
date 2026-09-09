@@ -865,5 +865,100 @@ class BenchmarkRunRequest(BaseModel):
     test_size: float = Field(0.25, ge=0.1, le=0.4, description="Test split proportion")
 
 
+# ==============================================================================
+# UNIFIED FARM SETUP & HARVEST FEEDBACK SCHEMAS
+# ==============================================================================
+
+class UserProfileExtended(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    role: str
+    is_active: bool
+    created_at: datetime
+    farm_count: int = 0
+    location_preference: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FarmSetupRequest(BaseModel):
+    # Farm Info
+    farm_name: str = Field(..., min_length=2, max_length=150, description="Farm identifier name")
+    location: str = Field(..., min_length=2, max_length=200, description="District / Region name")
+    city: Optional[str] = "Guntur"
+    state: Optional[str] = "Andhra Pradesh"
+    country: str = Field(default="India")
+    latitude: float = Field(..., ge=-90.0, le=90.0, description="GPS Latitude")
+    longitude: float = Field(..., ge=-180.0, le=180.0, description="GPS Longitude")
+    total_area_hectares: float = Field(..., gt=0.1, le=50000.0, description="Total farm area")
+    area_unit: str = Field(default="Hectares", description="Hectares or Acres")
+
+    # Crop Info
+    crop_name: str = Field(..., min_length=2, max_length=100, description="Primary crop name")
+    crop_variety: Optional[str] = Field(default="Certified High Yield (PBW-343 / Swarna)")
+    season: str = Field(default="Rabi", description="Kharif, Rabi, or Zaid")
+    planting_date: Optional[datetime] = None
+    expected_harvest_date: Optional[datetime] = None
+    growth_stage: str = Field(default="Vegetative / Tillering")
+    cultivated_area_hectares: Optional[float] = None
+
+    # Soil Info
+    soil_nitrogen: float = Field(..., ge=5.0, le=500.0, description="Nitrogen level in kg/ha")
+    soil_phosphorus: float = Field(..., ge=2.0, le=250.0, description="Phosphorus level in kg/ha")
+    soil_potassium: float = Field(..., ge=5.0, le=600.0, description="Potassium level in kg/ha")
+    soil_ph: float = Field(..., ge=4.0, le=9.5, description="Soil pH level")
+    soil_moisture: float = Field(..., ge=2.0, le=75.0, description="Soil moisture %")
+    organic_matter: Optional[float] = Field(default=0.75, ge=0.05, le=10.0, description="Organic matter %")
+    soil_type: Optional[str] = Field(default="Alluvial Loam", description="Soil classification")
+
+
+class FarmSetupResponse(BaseModel):
+    status: str = "success"
+    message: str
+    farm: FarmResponse
+    field: FieldResponse
+    crop: CropResponse
+    soil_telemetry: Dict[str, Any]
+    weather: Dict[str, Any]
+    satellite: Dict[str, Any]
+    prediction: Dict[str, Any]
+    quantum_analysis: Dict[str, Any]
+    risk_outlook: Dict[str, Any]
+    recommendations: Dict[str, Any]
+    economic_impact: Dict[str, Any]
+
+
+class HarvestResultCreate(BaseModel):
+    farm_id: int
+    field_id: Optional[int] = None
+    crop_name: str = Field(..., min_length=2)
+    season_year: str = Field(..., min_length=2)
+    actual_yield: float = Field(..., gt=0.0, description="Actual recorded yield in Quintals/Acre")
+    predicted_yield: Optional[float] = None
+    actual_nitrogen: Optional[float] = None
+    actual_water_mm: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class HarvestResultResponse(BaseModel):
+    id: int
+    farm_id: int
+    field_id: Optional[int]
+    crop_name: str
+    season_year: str
+    predicted_yield: float
+    actual_yield: float
+    error_pct: float
+    actual_nitrogen: Optional[float]
+    actual_water_mm: Optional[float]
+    notes: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 
 

@@ -144,7 +144,7 @@ def get_weather_intelligence(
     farm_id: int,
     latitude: float,
     longitude: float,
-    farm_name: str = "Green Valley Agricultural Station"
+    farm_name: str = "Monitored Farm"
 ) -> Dict[str, Any]:
     """
     Main entry point for complete Weather Intelligence.

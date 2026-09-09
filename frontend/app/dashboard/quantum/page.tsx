@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Atom, ShieldCheck, Cpu, Code2, ChevronDown, ChevronUp, Sparkles, Layers } from "lucide-react";
+import { Atom, ShieldCheck, Cpu, Code2, ChevronDown, ChevronUp, Layers } from "lucide-react";
 import { api, QuantumKernelMatrix } from "@/lib/api";
 
 export default function QuantumAnalysisPage() {

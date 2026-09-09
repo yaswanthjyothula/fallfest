@@ -281,18 +281,6 @@ INSERT INTO public.users (email, hashed_password, full_name, role)
 VALUES ('admin@agriquantum.com', '$2b$12$K8h7R1f0sC6X9vY0m8qJae4D5v6c7B8a9Z0x1y2w3v4u5t6s7r8q9', 'AgriQuantum Administrator', 'Administrator')
 ON CONFLICT (email) DO NOTHING;
 
-INSERT INTO public.farms (user_id, name, location, latitude, longitude, total_area_hectares)
-VALUES (1, 'Green Valley Agricultural Station', 'Punjab Agricultural Belt, Sector 4', 30.9010, 75.8573, 120.0)
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.fields (farm_id, name, area_hectares, soil_type)
-VALUES (1, 'Plot Alpha-1 (Wheat Monitored)', 35.0, 'Alluvial Loam')
-ON CONFLICT DO NOTHING;
-
-INSERT INTO public.crops (field_id, name, variety, season, growth_stage)
-VALUES (1, 'Winter Wheat', 'Triticum aestivum PBW-343', 'Rabi', 'Stem Elongation (Feekes 6)')
-ON CONFLICT DO NOTHING;
-
 INSERT INTO public.model_versions (version_tag, model_name, framework, parameters_json)
 VALUES ('v2.4.1', 'AgriQuantum QSVR', 'Qiskit Aer', '{"qubits": 4, "reps": 2, "entanglement": "linear"}')
 ON CONFLICT (version_tag) DO NOTHING;

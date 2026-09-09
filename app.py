@@ -61,7 +61,7 @@ if "dashboard_tab" not in st.session_state:
 if "last_prediction" not in st.session_state:
     st.session_state.last_prediction = None
 if "selected_farm" not in st.session_state:
-    st.session_state.selected_farm = "Green Valley Agricultural Station"
+    st.session_state.selected_farm = "Research Station Alpha"
 if "yield_unit" not in st.session_state:
     st.session_state.yield_unit = "Quintals per Acre"
 if "currency" not in st.session_state:
@@ -625,7 +625,7 @@ df_plots = data_dict["df"]
 # ==============================================================================
 # INTERACTIVE GEOSPATIAL MAP FUNCTION (MapLibre / Pydeck)
 # ==============================================================================
-def render_interactive_farm_map(latitude: float = 16.5062, longitude: float = 80.6480, farm_name: str = "Green Valley Station"):
+def render_interactive_farm_map(latitude: float = 16.5062, longitude: float = 80.6480, farm_name: str = "Research Station Alpha"):
     """
     Renders hardware-accelerated interactive polygon map with field management zones
     and NDVI vegetative vigor overlays.
@@ -831,10 +831,10 @@ def render_dashboard_sidebar():
         st.markdown(
             """
             <div class="sidebar-user-profile">
-                <div class="user-avatar-circle">AT</div>
+                <div class="user-avatar-circle">AQ</div>
                 <div>
-                    <div class="user-profile-name">Dr. Aris Thorne</div>
-                    <div class="user-profile-role">Lead Agronomist • Green Valley</div>
+                    <div class="user-profile-name">AgriQuantum Research</div>
+                    <div class="user-profile-role">Quantum Agronomy Lab</div>
                 </div>
             </div>
             """,
@@ -1175,7 +1175,7 @@ elif st.session_state.app_view == "dashboard":
         col_sel_farm, col_sel_season = st.columns([1.3, 1.0])
         with col_sel_farm:
             farm_options = [
-                "Green Valley Agricultural Station",
+                "Research Station Alpha",
                 "Coastal Alluvial Basin (Zone 4B)",
                 "Deccan Precision Agro Center",
                 "Northern Terrace Field (Plot 104)",
@@ -1470,11 +1470,11 @@ elif st.session_state.app_view == "dashboard":
         else:
             # Map selected farm to coordinates
             farm_coords = {
-                "Green Valley Farm": (30.9010, 75.8573, "Punjab Agricultural Belt"),
+                "Research Station Alpha": (30.9010, 75.8573, "Punjab Agricultural Belt"),
                 "Coastal Alluvial Basin": (16.5062, 80.6480, "Krishna-Godavari Delta"),
                 "Deccan Semi-Arid Plot": (17.3850, 78.4867, "Deccan Plateau"),
             }
-            sel_farm = st.session_state.get("selected_farm", "Green Valley Farm")
+            sel_farm = st.session_state.get("selected_farm", "Research Station Alpha")
             lat_f, lon_f, loc_desc = farm_coords.get(sel_farm, (30.9010, 75.8573, "Punjab Belt"))
 
             with st.spinner("Fetching live agro-meteorological telemetry from Visual Crossing..."):

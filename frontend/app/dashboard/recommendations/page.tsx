@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   TrendingUp,
   Droplets,
@@ -73,8 +74,37 @@ export default function RecommendationsPage() {
   }
 
   useEffect(() => {
-    generatePlan();
-  }, [goal, splitNitrogen, subsurfaceDrip, micronutrientSpray, cropType, activeFarmId]);
+    if (farms.length > 0) {
+      generatePlan();
+    }
+  }, [goal, splitNitrogen, subsurfaceDrip, micronutrientSpray, cropType, activeFarmId, farms.length]);
+
+  if (farms.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-2xl p-10 border border-slate-200 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <Sprout className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">No Recommendations Available Yet</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Complete your farm analysis to receive precision fertilizer (N-P-K) dosage, supplemental irrigation schedules, and net economic upside projections.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard/farms"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              <Sprout className="w-4 h-4" />
+              <span>Add My Farm</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

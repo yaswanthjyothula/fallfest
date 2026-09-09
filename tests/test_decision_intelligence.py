@@ -29,7 +29,7 @@ class TestDecisionIntelligence(unittest.TestCase):
         token_data = login_res.json()
         self.assertIn("access_token", token_data)
         self.assertEqual(token_data["token_type"], "bearer")
-        self.assertIn("Farmer", token_data.get("full_name", ""))
+        self.assertEqual(token_data.get("full_name", ""), "Yaswanth")
 
         # 2. Authenticated profile lookup using Bearer token
         token = token_data["access_token"]

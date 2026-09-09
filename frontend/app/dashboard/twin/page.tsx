@@ -22,6 +22,7 @@ import {
   Droplets,
   HelpCircle,
   ArrowRight,
+  Sprout,
 } from "lucide-react";
 
 import { FarmTimeline } from "@/components/FarmTimeline";
@@ -39,8 +40,8 @@ const MapComponent = dynamic(() => import("@/components/MapComponent"), {
 });
 
 export default function FarmDigitalTwinPage() {
-  const { activeFarm, activeFarmId } = useFarm();
-  const farmId = activeFarm?.id || activeFarmId || 1;
+  const { activeFarm, activeFarmId, farms, loadingFarms } = useFarm();
+  const farmId = activeFarm?.id || activeFarmId || (farms.length > 0 ? farms[0].id : 1);
 
   const [twinData, setTwinData] = useState<any>(null);
   const [riskData, setRiskData] = useState<any>(null);
@@ -101,26 +102,54 @@ export default function FarmDigitalTwinPage() {
   };
 
   // Safe property extraction supporting both backend formats
-  const farmName = twinData?.farm_name || activeFarm?.name || "Green Valley Agricultural Station";
+  const farmName = twinData?.farm_name || activeFarm?.name || "Monitored Agricultural Holding";
   const latitude = Number(twinData?.latitude || activeFarm?.latitude || 16.5062);
   const longitude = Number(twinData?.longitude || activeFarm?.longitude || 80.6480);
-  const totalArea = twinData?.total_area_hectares || activeFarm?.total_area_hectares || 120;
+  const totalArea = twinData?.total_area_hectares || activeFarm?.total_area_hectares || 25.0;
   const cropName = twinData?.crop || "Winter Wheat (PBW-343)";
   const growthStage = twinData?.growth_stage || twinData?.crop_stage || "Stem Elongation (Feekes 6)";
-  const soilNitrogen = twinData?.mean_nitrogen_kg_ha ?? twinData?.soil_profile?.nitrogen ?? 92;
-  const soilPhosphorus = twinData?.soil_profile?.phosphorus ?? 42;
-  const soilPotassium = twinData?.soil_profile?.potassium ?? 42;
+  const soilNitrogen = twinData?.mean_nitrogen_kg_ha ?? twinData?.soil_profile?.nitrogen ?? 115;
+  const soilPhosphorus = twinData?.soil_profile?.phosphorus ?? 45;
+  const soilPotassium = twinData?.soil_profile?.potassium ?? 50;
   const soilPh = twinData?.mean_ph ?? twinData?.soil_profile?.ph ?? 6.8;
-  const soilMoisture = twinData?.mean_moisture_pct ?? twinData?.soil_profile?.moisture ?? 28.5;
+  const soilMoisture = twinData?.mean_moisture_pct ?? twinData?.soil_profile?.moisture ?? 28.0;
   const soilTexture = twinData?.soil_type || twinData?.soil_profile?.soil_texture || "Alluvial Loam";
-  const currentNdvi = twinData?.current_ndvi ?? twinData?.satellite?.current_ndvi ?? 0.74;
-  const cloudCover = twinData?.satellite?.cloud_cover ?? 8;
-  const temperature = twinData?.current_weather?.temperature_c ?? twinData?.weather?.temperature ?? 28.4;
+  const currentNdvi = twinData?.current_ndvi ?? twinData?.satellite?.current_ndvi ?? 0.68;
+  const cloudCover = twinData?.satellite?.cloud_cover ?? 2;
+  const temperature = twinData?.current_weather?.temperature_c ?? twinData?.weather?.temperature ?? 26.5;
   const rainfall = twinData?.current_weather?.precipitation_mm ?? twinData?.weather?.rainfall ?? 0.0;
   const overallRiskLevel = riskData?.overall_risk_level || twinData?.active_risk_level || "Low";
 
+  if (!loadingFarms && farms.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-2xl p-10 border border-slate-200 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <Layers className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">No Farm Digital Twin Available</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Add your farm holding to construct a 360-degree digital twin synchronized with live weather, Sentinel satellite telemetry, and soil metrics.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard/farms"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              <Sprout className="w-4 h-4" />
+              <span>Add My Farm</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 text-white p-6 rounded-2xl shadow-sm">
         <div>

@@ -163,19 +163,19 @@ function LoginForm() {
             </button>
           </div>
 
-          {/* Quick Demo Fill Banner */}
+          {/* Quick Test Fill Banner */}
           {mode === "signin" && (
             <div className="p-3 bg-emerald-50/80 border border-emerald-200/80 rounded-xl flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                <span className="text-emerald-950 font-medium">Demo farmer account available</span>
+                <span className="text-emerald-950 font-medium">Evaluation test account available</span>
               </div>
               <button
                 type="button"
                 onClick={handleFillDemo}
                 className="text-[11px] font-bold text-emerald-800 bg-white border border-emerald-300 px-2.5 py-1 rounded-lg hover:bg-emerald-100/50 transition cursor-pointer"
               >
-                Auto-Fill Demo
+                Auto-Fill Credentials
               </button>
             </div>
           )}

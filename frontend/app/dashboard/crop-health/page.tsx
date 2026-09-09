@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Leaf, Satellite, AlertTriangle, ShieldCheck, TrendingUp, Calendar, Info, MapPin } from "lucide-react";
 import { api } from "@/lib/api";
 import { useFarm } from "@/lib/FarmContext";
@@ -12,9 +13,13 @@ export default function CropHealthPage() {
 
   useEffect(() => {
     async function loadHealth() {
+      if (farms.length === 0) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
-        const data = await api.getSatelliteCropHealth(activeFarmId || 1);
+        const data = await api.getSatelliteCropHealth(activeFarmId || farms[0].id);
         setCropHealth(data);
       } catch (err) {
         console.warn("Failed to load satellite crop health:", err);
@@ -23,7 +28,34 @@ export default function CropHealthPage() {
       }
     }
     loadHealth();
-  }, [activeFarmId]);
+  }, [activeFarmId, farms.length]);
+
+  if (!loading && farms.length === 0) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+        <div className="bg-white rounded-2xl p-10 border border-slate-200 text-center space-y-4 shadow-sm">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
+            <Satellite className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-slate-900">No Crop Health Telemetry Available</h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Add your farm holding to retrieve Copernicus Sentinel-2 satellite NDVI surface reflectance and crop vigour metrics.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard/farms"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs transition cursor-pointer shadow-xs"
+            >
+              <Leaf className="w-4 h-4" />
+              <span>Add My Farm</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

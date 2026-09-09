@@ -744,4 +744,99 @@ export const api = {
     });
     return handleResponse<any>(res);
   },
+
+  // User & Profile
+  async getMe(): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/me`);
+    return handleResponse<any>(res);
+  },
+
+  // Unified Farm Setup & Analysis
+  async setupFarm(payload: {
+    farm_name: string;
+    location: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    latitude: number;
+    longitude: number;
+    total_area_hectares: number;
+    area_unit?: string;
+    crop_name: string;
+    crop_variety?: string;
+    season?: string;
+    planting_date?: string;
+    expected_harvest_date?: string;
+    growth_stage?: string;
+    cultivated_area_hectares?: number;
+    soil_nitrogen: number;
+    soil_phosphorus: number;
+    soil_potassium: number;
+    soil_ph: number;
+    soil_moisture: number;
+    organic_matter?: number;
+    soil_type?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/farms/setup`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async getFarmAnalysis(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/farms/${farmId}/analysis`);
+    return handleResponse<any>(res);
+  },
+
+  async getFarmCropHealth(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/crop-health/${farmId}`);
+    return handleResponse<any>(res);
+  },
+
+  async getFarmRisk(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/risk/${farmId}`);
+    return handleResponse<any>(res);
+  },
+
+  async getFarmRecommendations(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/recommendations/${farmId}`);
+    return handleResponse<any>(res);
+  },
+
+  async getFarmLatestSatellite(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/satellite/latest/${farmId}`);
+    return handleResponse<any>(res);
+  },
+
+  async getFarmHistory(farmId: number): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/history/${farmId}`);
+    return handleResponse<any>(res);
+  },
+
+  async recordHarvestResult(payload: {
+    farm_id: number;
+    field_id?: number;
+    crop_name: string;
+    season_year: string;
+    actual_yield: number;
+    predicted_yield?: number;
+    actual_nitrogen?: number;
+    actual_water_mm?: number;
+    notes?: string;
+  }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/harvest-results`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
+  async getHarvestHistory(farmId: number): Promise<any[]> {
+    const res = await fetch(`${API_BASE_URL}/harvest-results/${farmId}`);
+    return handleResponse<any[]>(res);
+  },
 };
+

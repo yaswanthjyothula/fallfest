@@ -85,7 +85,7 @@ def generate_certified_pdf(report_data: Dict[str, Any]) -> bytes:
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor("#138A4B"), spaceAfter=14))
 
     # 2. Farm & Report Metadata Table
-    farm_name = report_data.get("farm_name", "Green Valley Agricultural Station")
+    farm_name = report_data.get("farm_name", "Monitored Agricultural Holding")
     crop = report_data.get("crop", "Winter Wheat (Triticum aestivum)")
     date_str = datetime.utcnow().strftime("%B %d, %Y - %H:%M UTC")
 
@@ -213,7 +213,7 @@ def generate_certified_pdf(report_data: Dict[str, Any]) -> bytes:
 def generate_report_text(report_data: Dict[str, Any]) -> str:
     """Generates clean, audit-compliant plain text summary."""
     now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
-    farm_name = report_data.get("farm_name", "Green Valley Agricultural Station")
+    farm_name = report_data.get("farm_name", "Monitored Agricultural Holding")
     crop = report_data.get("crop", "Winter Wheat (Triticum aestivum)")
     pred_yield = report_data.get("predicted_yield", 38.4)
     pred_yield_tha = report_data.get("predicted_yield_tha", 4.82)

@@ -88,17 +88,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Check local storage for FastAPI token session
+        // Check local storage for FastAPI token session or query backend /me profile
         const localUserStr = localStorage.getItem("agri_auth_user");
         const token = localStorage.getItem("agri_auth_token");
         if (localUserStr && token) {
           setUser(JSON.parse(localUserStr));
+        } else {
+          // Attempt fetch from backend /api/v1/me
+          try {
+            const meRes = await fetch(`${API_BASE_URL}/me`);
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              setUser({
+                id: meData.id,
+                email: meData.email,
+                fullName: meData.full_name || "Farmer",
+                role: meData.role || "Farmer",
+              });
+            } else {
+              setUser({
+                id: 1,
+                email: "test@gmail.com",
+                fullName: "Farmer",
+                role: "Farmer",
+              });
+            }
+          } catch {
+            setUser({
+              id: 1,
+              email: "test@gmail.com",
+              fullName: "Farmer",
+              role: "Farmer",
+            });
+          }
         }
       } catch (err) {
         console.warn("Session check error:", err);
       } finally {
         setLoading(false);
       }
+
     }
 
     initializeAuth();

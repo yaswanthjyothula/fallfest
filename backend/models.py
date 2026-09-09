@@ -74,7 +74,7 @@ class Field(Base):
     crops = relationship("Crop", back_populates="field", cascade="all, delete-orphan")
     soil_measurements = relationship("SoilMeasurement", back_populates="field", cascade="all, delete-orphan")
     satellite_observations = relationship("SatelliteObservation", back_populates="field", cascade="all, delete-orphan")
-    predictions = relationship("Prediction", back_populates="field")
+    predictions = relationship("Prediction", back_populates="field", cascade="all, delete-orphan")
     disease_detections = relationship("DiseaseDetection", back_populates="field", cascade="all, delete-orphan")
 
 
