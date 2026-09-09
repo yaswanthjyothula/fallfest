@@ -90,7 +90,7 @@ export function Navbar({ onToggleMobile }: NavbarProps) {
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : "FJ";
+    : "FY";
 
   const handleLogout = async () => {
     await signOut();
@@ -144,7 +144,7 @@ export function Navbar({ onToggleMobile }: NavbarProps) {
               {initials}
             </div>
             <span className="hidden xl:block text-xs font-semibold text-slate-800 max-w-[120px] truncate">
-              {user?.fullName || "Farmer Jaswanth"}
+              {user?.fullName || "Farmer Yaswanth"}
             </span>
             <button
               onClick={handleLogout}

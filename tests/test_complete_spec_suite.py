@@ -67,7 +67,7 @@ class TestMasterAgriQuantumSpecification(unittest.TestCase):
         self.assertTrue(verify_password(pwd, hashed))
         self.assertFalse(verify_password("WrongPassword", hashed))
 
-        token = create_access_token({"sub": "farmer_jaswanth@agriquantum.com", "role": "farmer"})
+        token = create_access_token({"sub": "farmer_yaswanth@agriquantum.com", "role": "farmer"})
         self.assertIsInstance(token, str)
         self.assertGreater(len(token), 20)
 

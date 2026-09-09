@@ -885,6 +885,11 @@ class UserProfileExtended(BaseModel):
         from_attributes = True
 
 
+class UserUpdateRequest(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=150)
+    location_preference: Optional[str] = Field(None, max_length=200)
+
+
 class FarmSetupRequest(BaseModel):
     # Farm Info
     farm_name: str = Field(..., min_length=2, max_length=150, description="Farm identifier name")

@@ -213,7 +213,7 @@ function LoginForm() {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Jaswanth Jyothula"
+                    placeholder="e.g. Yaswanth Jyothula"
                     className="block w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-emerald-600"
                   />
                 </div>

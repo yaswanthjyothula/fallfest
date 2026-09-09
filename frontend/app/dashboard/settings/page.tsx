@@ -19,7 +19,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useFarm } from "@/lib/FarmContext";
 
 export default function PlatformSettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const { farms } = useFarm();
   const [profile, setProfile] = useState<any>(null);
   const [supabaseStatus, setSupabaseStatus] = useState<any>(null);
@@ -52,13 +52,27 @@ export default function PlatformSettingsPage() {
     loadSettings();
   }, [user]);
 
-  const displayName = profile?.full_name || user?.fullName || "Farmer";
+  const displayName = profile?.full_name || user?.fullName || "Yaswanth";
   const displayEmail = profile?.email || user?.email || "";
   const displayRole = profile?.role || user?.role || "Farmer";
   const farmCount = profile?.farm_count !== undefined ? profile.farm_count : farms.length;
 
-  function handleSaveProfile(e: React.FormEvent) {
+  async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
+    const newName = editName.trim();
+    if (newName) {
+      updateUserProfile(newName);
+      try {
+        await api.updateProfile({ full_name: newName, location_preference: editLocation });
+      } catch (err) {
+        console.warn("Could not save to backend:", err);
+      }
+      setProfile((prev: any) => ({
+        ...prev,
+        full_name: newName,
+        location_preference: editLocation,
+      }));
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   }

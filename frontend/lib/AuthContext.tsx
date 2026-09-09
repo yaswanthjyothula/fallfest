@@ -37,6 +37,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: string | null; message: string | null }>;
   requestLocationPermission: () => Promise<boolean>;
   setManualLocation: (city: string, region: string, lat: number, lon: number) => void;
+  updateUserProfile: (fullName: string) => void;
 }
 
 const DEFAULT_LOCATION: UserLocation = {
@@ -92,24 +93,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const localUserStr = localStorage.getItem("agri_auth_user");
         const token = localStorage.getItem("agri_auth_token");
         if (localUserStr && token) {
-          setUser(JSON.parse(localUserStr));
+          try {
+            const parsed = JSON.parse(localUserStr);
+            if (parsed.fullName && parsed.fullName.toLowerCase().includes("jaswanth")) {
+              parsed.fullName = parsed.fullName.replace(/jaswanth/gi, "Yaswanth");
+              localStorage.setItem("agri_auth_user", JSON.stringify(parsed));
+            }
+            setUser(parsed);
+          } catch {
+            setUser(null);
+          }
         } else {
           // Attempt fetch from backend /api/v1/me
           try {
             const meRes = await fetch(`${API_BASE_URL}/me`);
             if (meRes.ok) {
               const meData = await meRes.json();
+              let name = meData.full_name || "Yaswanth";
+              if (name.toLowerCase().includes("jaswanth")) {
+                name = name.replace(/jaswanth/gi, "Yaswanth");
+              }
               setUser({
                 id: meData.id,
                 email: meData.email,
-                fullName: meData.full_name || "Farmer",
+                fullName: name,
                 role: meData.role || "Farmer",
               });
             } else {
               setUser({
                 id: 1,
                 email: "test@gmail.com",
-                fullName: "Farmer",
+                fullName: "Yaswanth",
                 role: "Farmer",
               });
             }
@@ -117,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser({
               id: 1,
               email: "test@gmail.com",
-              fullName: "Farmer",
+              fullName: "Yaswanth",
               role: "Farmer",
             });
           }
@@ -415,6 +429,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserProfile = useCallback((newFullName: string) => {
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, fullName: newFullName };
+      try {
+        localStorage.setItem("agri_auth_user", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -431,6 +456,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         requestLocationPermission,
         setManualLocation,
+        updateUserProfile,
       }}
     >
       {children}

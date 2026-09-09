@@ -768,6 +768,15 @@ export const api = {
     return handleResponse<any>(res);
   },
 
+  async updateProfile(payload: { full_name?: string; location_preference?: string }): Promise<any> {
+    const res = await fetch(`${API_BASE_URL}/me`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<any>(res);
+  },
+
   // Unified Farm Setup & Analysis
   async setupFarm(payload: {
     farm_name: string;
