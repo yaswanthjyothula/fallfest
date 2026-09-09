@@ -1,0 +1,60 @@
+{
+  "crop_yield": {
+    "source": "Government of India DES",
+    "type": "historical",
+    "geography": "India",
+    "authority": "Directorate of Economics & Statistics, Department of Agriculture & Farmers Welfare, Ministry of Agriculture & Farmers Welfare",
+    "portal": "https://aps.dac.gov.in / https://data.gov.in",
+    "temporal_coverage": "2000-2024",
+    "spatial_resolution": "District / State",
+    "cadence": "Seasonal / Annual",
+    "metrics": ["Area (Hectares)", "Production (Tonnes)", "Yield (Tonnes/Hectare)"]
+  },
+  "weather": {
+    "source": "IMD",
+    "type": "live/forecast",
+    "geography": "India",
+    "authority": "India Meteorological Department, Ministry of Earth Sciences, Government of India",
+    "portal": "https://mausam.imd.gov.in",
+    "cadence": "10-min live station observations, 7-day daily forecast envelope, 3-hour Doppler radar nowcast, agromet advisories",
+    "spatial_resolution": "Agromet Station / District / Sub-division / Agro-Climatic Zone",
+    "metrics": ["Temperature (°C)", "Precipitation (mm)", "Relative Humidity (%)", "Wind Speed & Direction", "Surface Pressure", "Weather Warnings"]
+  },
+  "satellite": {
+    "source": "Copernicus Sentinel-2",
+    "type": "earth_observation",
+    "geography": "India",
+    "authority": "European Space Agency (ESA) & European Commission Copernicus Programme",
+    "portal": "https://dataspace.copernicus.eu",
+    "bands": ["B04 (Red 665nm)", "B08 (NIR 842nm)"],
+    "formula": "NDVI = (B8 - B4) / (B8 + B4)",
+    "cadence": "5-day constellation revisit frequency",
+    "spatial_resolution": "10m Bottom-of-Atmosphere (BOA) Surface Reflectance (L2A)",
+    "metrics": ["NDVI (Normalized Difference Vegetation Index)", "Canopy Chlorophyll Reflectance", "Cloud Mask Screening"]
+  },
+  "market": {
+    "source": "AGMARKNET/e-NAM",
+    "type": "daily",
+    "geography": "India",
+    "authority": "Directorate of Marketing & Inspection (DMI) & Small Farmers Agribusiness Consortium (SFAC), Ministry of Agriculture & Farmers Welfare",
+    "portal": "https://agmarknet.gov.in / https://enam.gov.in",
+    "cadence": "Daily Market Data (Published post-trading closure at APMC yards)",
+    "spatial_resolution": "Regulated APMC Mandi / District",
+    "metrics": ["Minimum Price (₹/Quintal)", "Modal Price (₹/Quintal)", "Maximum Price (₹/Quintal)", "Market Arrivals (Tonnes)"]
+  },
+  "remote_sensing": {
+    "source": "ISRO MOSDAC",
+    "type": "near_real_time/archive",
+    "geography": "India",
+    "authority": "Space Applications Centre (SAC), Indian Space Research Organisation (ISRO), Ahmedabad",
+    "portal": "https://mosdac.gov.in",
+    "satellites": ["INSAT-3D", "INSAT-3DR", "Kalpana-1"],
+    "products": [
+      "INSAT-3DR Imager L2B Land Surface Temperature (LST)",
+      "Hydro-Estimator Method (HEM) High-Resolution Precipitation",
+      "Daily Surface Solar Radiation / Insolation (DSR)"
+    ],
+    "cadence": "15 to 30-minute scan cadence with ~45-minute processing and georectification latency",
+    "spatial_resolution": "1km (Visible) to 4km (Thermal IR)"
+  }
+}

@@ -879,6 +879,79 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/farms/${farmId}/weather-impact`);
     return handleResponse<FarmWeatherImpactResponse>(res);
   },
+
+  // ---------------------------------------------------------------------------
+  // India-Only Intelligence & Real Data Endpoints
+  // ---------------------------------------------------------------------------
+  async validateIndiaBoundary(latitude: number, longitude: number): Promise<IndiaBoundaryValidationResponse> {
+    const res = await fetch(`${API_BASE_URL}/geo/validate-boundary`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ latitude, longitude }),
+    });
+    return handleResponse<IndiaBoundaryValidationResponse>(res);
+  },
+
+  async resolvePincode(pincode: string): Promise<PincodeResolutionResponse> {
+    const res = await fetch(`${API_BASE_URL}/geo/pincode/${pincode}`);
+    return handleResponse<PincodeResolutionResponse>(res);
+  },
+
+  async getWeatherWarnings(params: { farm_id?: number; latitude?: number; longitude?: number }): Promise<ImdWeatherWarningsResponse> {
+    const query = new URLSearchParams();
+    if (params.farm_id) query.append("farm_id", params.farm_id.toString());
+    if (params.latitude !== undefined) query.append("latitude", params.latitude.toString());
+    if (params.longitude !== undefined) query.append("longitude", params.longitude.toString());
+    const res = await fetch(`${API_BASE_URL}/weather/warnings?${query.toString()}`);
+    return handleResponse<ImdWeatherWarningsResponse>(res);
+  },
+
+  async getWeatherNowcast(params: { farm_id?: number; latitude?: number; longitude?: number }): Promise<ImdNowcastResponse> {
+    const query = new URLSearchParams();
+    if (params.farm_id) query.append("farm_id", params.farm_id.toString());
+    if (params.latitude !== undefined) query.append("latitude", params.latitude.toString());
+    if (params.longitude !== undefined) query.append("longitude", params.longitude.toString());
+    const res = await fetch(`${API_BASE_URL}/weather/nowcast?${query.toString()}`);
+    return handleResponse<ImdNowcastResponse>(res);
+  },
+
+  async getMosdacSatellite(params: { farm_id?: number; latitude?: number; longitude?: number }): Promise<MosdacSatelliteResponse> {
+    const query = new URLSearchParams();
+    if (params.farm_id) query.append("farm_id", params.farm_id.toString());
+    if (params.latitude !== undefined) query.append("latitude", params.latitude.toString());
+    if (params.longitude !== undefined) query.append("longitude", params.longitude.toString());
+    const res = await fetch(`${API_BASE_URL}/satellite/mosdac?${query.toString()}`);
+    return handleResponse<MosdacSatelliteResponse>(res);
+  },
+
+  async getMandiPrices(params: {
+    state?: string;
+    district?: string;
+    crop?: string;
+    farm_id?: number;
+    latitude?: number;
+    longitude?: number;
+  }): Promise<MandiPricesResponse> {
+    const query = new URLSearchParams();
+    if (params.state) query.append("state", params.state);
+    if (params.district) query.append("district", params.district);
+    if (params.crop) query.append("crop", params.crop);
+    if (params.farm_id) query.append("farm_id", params.farm_id.toString());
+    if (params.latitude !== undefined) query.append("latitude", params.latitude.toString());
+    if (params.longitude !== undefined) query.append("longitude", params.longitude.toString());
+    const res = await fetch(`${API_BASE_URL}/market/prices?${query.toString()}`);
+    return handleResponse<MandiPricesResponse>(res);
+  },
+
+  async getMandiCrops(): Promise<{ commodities: string[]; source: string }> {
+    const res = await fetch(`${API_BASE_URL}/market/crops`);
+    return handleResponse<{ commodities: string[]; source: string }>(res);
+  },
+
+  async getDataSources(): Promise<DataSourcesManifestResponse> {
+    const res = await fetch(`${API_BASE_URL}/data-sources`);
+    return handleResponse<DataSourcesManifestResponse>(res);
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -951,4 +1024,147 @@ export interface FarmWeatherImpactResponse {
   model_type_disclaimer: string;
   timestamp: string;
 }
+
+// ---------------------------------------------------------------------------
+// India-Only Real Data Models & Manifests
+// ---------------------------------------------------------------------------
+export interface IndiaBoundaryValidationResponse {
+  is_valid: boolean;
+  message: string;
+  state?: string | null;
+  district?: string | null;
+  country: string;
+  agro_climatic_zone_id?: number | null;
+  agro_climatic_zone_name?: string | null;
+  reference_soil?: string | null;
+}
+
+export interface PincodeResolutionResponse {
+  pincode: string;
+  city: string;
+  district: string;
+  state: string;
+  latitude: number;
+  longitude: number;
+  country: string;
+  agro_climatic_zone_id: number;
+  agro_climatic_zone_name: string;
+  reference_soil: string;
+  crops: string[];
+  is_valid_india: boolean;
+  resolution_source: string;
+}
+
+export interface ImdWeatherWarningItem {
+  id: string;
+  level: "Green" | "Yellow" | "Orange" | "Red";
+  warning_type: string;
+  description: string;
+  affected_districts: string[];
+  valid_until_ist: string;
+  agromet_advisory: string;
+  action_required: string;
+}
+
+export interface ImdWeatherWarningsResponse {
+  source: string;
+  state: string;
+  district: string;
+  retrieved_at_ist: string;
+  freshness_badge: string;
+  highest_severity: string;
+  total_active_warnings: number;
+  warnings: ImdWeatherWarningItem[];
+}
+
+export interface ImdNowcastResponse {
+  source: string;
+  station: string;
+  district: string;
+  valid_window_ist: string;
+  retrieved_at_ist: string;
+  freshness_badge: string;
+  radar_reflectivity_dbz: number;
+  rain_probability_pct: number;
+  surface_wind_gust_kmh: number;
+  nowcast_headline: string;
+  nowcast_bulletin: string;
+}
+
+export interface MandiPriceItem {
+  market_name: string;
+  district: string;
+  state: string;
+  commodity: string;
+  variety: string;
+  min_price_inr_quintal: number;
+  modal_price_inr_quintal: number;
+  max_price_inr_quintal: number;
+  market_arrivals_tonnes?: number;
+  market_date: string;
+  source: string;
+  retrieved_at_ist: string;
+  freshness_badge: string;
+}
+
+export interface MandiPricesResponse {
+  status: string;
+  state_filtered?: string;
+  district_filtered?: string;
+  crop_filtered?: string;
+  market_date: string;
+  retrieved_at_ist: string;
+  freshness_badge: string;
+  source_authority: string;
+  total_records: number;
+  prices: MandiPriceItem[];
+}
+
+export interface MosdacObservationItem {
+  source: string;
+  provider: string;
+  satellite: string;
+  sensor: string;
+  product_name: string;
+  dataset: string;
+  observation_label: string;
+  acquisition_date: string;
+  acquisition_time_ist: string;
+  latency_status: string;
+  geographic_coverage: string;
+  state: string;
+  district: string;
+  latitude: number;
+  longitude: number;
+  land_surface_temp_c: number;
+  hydro_estimator_rain_estimate_mm: number;
+  insolation_flux_wm2: number;
+  cloud_status: string;
+  credentials_configured: boolean;
+  access_requirements: string;
+  data_url: string;
+}
+
+export interface MosdacSatelliteResponse {
+  observation: MosdacObservationItem;
+  product_catalog: Array<{
+    product_code: string;
+    satellite: string;
+    name: string;
+    resolution: string;
+    update_cadence: string;
+    latency: string;
+    agronomic_use: string;
+  }>;
+  traceability: {
+    authority: string;
+    portal: string;
+    observation_label: string;
+  };
+}
+
+export interface DataSourcesManifestResponse {
+  sources: Record<string, any>;
+}
+
 

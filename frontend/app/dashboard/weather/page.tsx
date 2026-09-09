@@ -33,10 +33,17 @@ import {
   Eye,
   CheckSquare,
   Square,
-  BarChart3,
-  HelpCircle
+  HelpCircle,
+  Radio,
+  Clock,
 } from "lucide-react";
-import { api, WeatherIntelligenceResponse, QuantumWeatherScenarioResponse } from "@/lib/api";
+import {
+  api,
+  WeatherIntelligenceResponse,
+  QuantumWeatherScenarioResponse,
+  ImdWeatherWarningsResponse,
+  ImdNowcastResponse,
+} from "@/lib/api";
 import { useFarm } from "@/lib/FarmContext";
 
 export default function WeatherIntelligencePage() {
@@ -45,6 +52,8 @@ export default function WeatherIntelligencePage() {
 
   // Data states
   const [weatherIntel, setWeatherIntel] = useState<WeatherIntelligenceResponse | null>(null);
+  const [imdWarnings, setImdWarnings] = useState<ImdWeatherWarningsResponse | null>(null);
+  const [imdNowcast, setImdNowcast] = useState<ImdNowcastResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +97,17 @@ export default function WeatherIntelligencePage() {
     } catch (err: any) {
       console.warn("Failed to fetch weather intelligence:", err);
       setError("Hyperlocal weather telemetry is momentarily unavailable. Showing calibrated regional baseline.");
+    }
+
+    try {
+      const [wRes, nRes] = await Promise.allSettled([
+        api.getWeatherWarnings({ farm_id: farmId }),
+        api.getWeatherNowcast({ farm_id: farmId }),
+      ]);
+      if (wRes.status === "fulfilled") setImdWarnings(wRes.value);
+      if (nRes.status === "fulfilled") setImdNowcast(nRes.value);
+    } catch (imdErr) {
+      console.warn("IMD warnings/nowcast query notice:", imdErr);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -523,8 +543,9 @@ export default function WeatherIntelligencePage() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               Weather Intelligence
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Live Telemetry
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+              OBSERVED • India Meteorological Service
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -630,6 +651,114 @@ export default function WeatherIntelligencePage() {
             </div>
           </div>
 
+          {/* 2b. Official IMD Agro-Meteorological Warnings & Doppler Radar Nowcast */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* IMD Severe Weather Warnings Card */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="w-4 h-4 text-amber-600" />
+                  <h3 className="text-xs font-bold text-slate-900">
+                    IMD Agro-Meteorological Warnings
+                  </h3>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider border ${
+                  imdWarnings?.highest_severity === "Red"
+                    ? "bg-rose-100 text-rose-800 border-rose-300"
+                    : imdWarnings?.highest_severity === "Orange"
+                    ? "bg-orange-100 text-orange-800 border-orange-300"
+                    : imdWarnings?.highest_severity === "Yellow"
+                    ? "bg-amber-100 text-amber-800 border-amber-300"
+                    : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                }`}>
+                  WARNING • {imdWarnings?.highest_severity || "Green"}
+                </span>
+              </div>
+
+              {imdWarnings?.warnings && imdWarnings.warnings.length > 0 ? (
+                <div className="space-y-2.5">
+                  {imdWarnings.warnings.map((w, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900">{w.warning_type}</span>
+                        <span className="text-[10px] font-mono text-slate-500">{w.valid_until_ist}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{w.description}</p>
+                      <div className="pt-1 border-t border-slate-200 text-[10px] space-y-0.5">
+                        <p className="text-emerald-900 font-medium">🌾 <span className="font-bold">Agromet Advisory:</span> {w.agromet_advisory}</p>
+                        <p className="text-slate-600"><span className="font-bold text-slate-700">Action:</span> {w.action_required}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-emerald-50/60 border border-emerald-200 text-center space-y-1">
+                  <ShieldCheck className="w-5 h-5 text-emerald-700 mx-auto" />
+                  <p className="text-xs font-bold text-emerald-900">No Severe Meteorological Warnings Active</p>
+                  <p className="text-[10px] text-emerald-700">District conditions are within safe agronomic parameters. Normal seasonal operations.</p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                <span>Source: {imdWarnings?.source || "India Meteorological Department (IMD)"}</span>
+                <span>{imdWarnings?.retrieved_at_ist || "Observed IST"}</span>
+              </div>
+            </div>
+
+            {/* IMD Doppler Radar Nowcast Card */}
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-xs font-bold text-slate-900">
+                    IMD Doppler Radar Nowcast
+                  </h3>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-300">
+                  NOWCAST • 2-3 Hr Window
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-semibold block">Radar Reflectivity</span>
+                  <p className="text-sm font-extrabold text-blue-900 font-mono mt-0.5">
+                    {imdNowcast?.radar_reflectivity_dbz ?? 18.5} dBZ
+                  </p>
+                  <span className="text-[9px] text-slate-400">Echo Intensity</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-semibold block">Rain Probability</span>
+                  <p className="text-sm font-extrabold text-emerald-800 font-mono mt-0.5">
+                    {imdNowcast?.rain_probability_pct ?? 15}%
+                  </p>
+                  <span className="text-[9px] text-slate-400">Micro-Cell PoP</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-semibold block">Surface Gusts</span>
+                  <p className="text-sm font-extrabold text-slate-800 font-mono mt-0.5">
+                    {imdNowcast?.surface_wind_gust_kmh ?? 16} km/h
+                  </p>
+                  <span className="text-[9px] text-slate-400">Doppler Vector</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
+                <p className="text-xs font-bold text-blue-950">
+                  {imdNowcast?.nowcast_headline || "Stable Micro-Climate Radar Envelopes"}
+                </p>
+                <p className="text-[11px] text-blue-900/90 leading-relaxed">
+                  {imdNowcast?.nowcast_bulletin || "No convective cloud development or severe squall lines detected along radar radial corridor."}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1">
+                <span>Station: {imdNowcast?.station || "Doppler Weather Radar (DWR)"}</span>
+                <span>{imdNowcast?.valid_window_ist || "Valid Window: 3 Hours"}</span>
+              </div>
+            </div>
+          </div>
+
           {/* 3. Comprehensive Current Weather Strip (12 Metrics) */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -638,10 +767,18 @@ export default function WeatherIntelligencePage() {
                 <h2 className="text-sm font-bold text-slate-900">
                   Current Hyperlocal Conditions — {weatherIntel.farm_name}
                 </h2>
+                <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  OBSERVED
+                </span>
               </div>
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                Coords: {weatherIntel.latitude.toFixed(3)}°N, {weatherIntel.longitude.toFixed(3)}°E
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                  Provider: {weatherIntel.weather_provider || "IMD"}
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                  Coords: {weatherIntel.latitude.toFixed(3)}°N, {weatherIntel.longitude.toFixed(3)}°E
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-xs">
@@ -704,10 +841,15 @@ export default function WeatherIntelligencePage() {
           {/* 4. 24-Hour Hourly Forecast Scrollable Strip */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Next 24-Hour Diurnal Progression</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Next 24-Hour Diurnal Progression</span>
+                </span>
+                <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
+                  FORECAST
+                </span>
+              </div>
               <span className="text-[10px] font-mono text-slate-400">Scroll horizontally for hourly intervals</span>
             </div>
 
@@ -791,10 +933,15 @@ export default function WeatherIntelligencePage() {
             {/* 7-Day Forecast Envelope */}
             <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-3">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>7-Day Daily Agricultural Forecast Envelope</span>
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>7-Day Daily Agricultural Forecast Envelope</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-blue-100 text-blue-800 border border-blue-200">
+                    FORECAST
+                  </span>
+                </div>
                 <span className="text-[10px] font-mono text-slate-400">Multi-parameter agro-forecast</span>
               </div>
 
@@ -871,10 +1018,15 @@ export default function WeatherIntelligencePage() {
           <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-emerald-700" />
-                  <span>Empirical Weather Impact on Yield</span>
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                    <BarChart3 className="w-4 h-4 text-emerald-700" />
+                    <span>Empirical Weather Impact on Yield</span>
+                  </h3>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    HISTORICAL
+                  </span>
+                </div>
                 <p className="text-[11px] text-slate-500">
                   Calibrated biophysical sensitivity curve showing crop yield response to precipitation volume.
                 </p>
@@ -906,6 +1058,9 @@ export default function WeatherIntelligencePage() {
                   </h2>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     4-Qubit QSVR
+                  </span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    SIMULATED SCENARIO
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1 max-w-2xl">

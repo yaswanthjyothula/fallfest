@@ -1,0 +1,65 @@
+state,district,crop,season,year,area_hectare,production_tonne,yield_tonne_per_hectare
+Punjab,Ludhiana,Wheat,Rabi,2021,254000.0,1285000.0,5.06
+Punjab,Ludhiana,Rice,Kharif,2021,258000.0,1135000.0,4.4
+Punjab,Patiala,Wheat,Rabi,2021,232000.0,1178000.0,5.08
+Punjab,Patiala,Rice,Kharif,2021,234000.0,1042000.0,4.45
+Punjab,Bathinda,Cotton,Kharif,2021,96000.0,61400.0,0.64
+Punjab,Bathinda,Wheat,Rabi,2021,253000.0,1240000.0,4.9
+Punjab,Amritsar,Wheat,Rabi,2021,188000.0,922000.0,4.9
+Punjab,Amritsar,Rice,Kharif,2021,182000.0,765000.0,4.2
+Punjab,Jalandhar,Wheat,Rabi,2022,172000.0,855000.0,4.97
+Haryana,Karnal,Wheat,Rabi,2021,171000.0,863000.0,5.05
+Haryana,Karnal,Rice,Kharif,2021,168000.0,688000.0,4.1
+Haryana,Hisar,Wheat,Rabi,2021,235000.0,1130000.0,4.81
+Haryana,Hisar,Cotton,Kharif,2021,122000.0,74000.0,0.61
+Haryana,Bhiwani,Mustard,Rabi,2021,98000.0,176000.0,1.8
+Andhra Pradesh,Guntur,Cotton,Kharif,2021,178000.0,115000.0,0.65
+Andhra Pradesh,Guntur,Rice,Kharif,2021,265000.0,980000.0,3.7
+Andhra Pradesh,Guntur,Maize,Rabi,2021,62000.0,425000.0,6.85
+Andhra Pradesh,Krishna,Rice,Kharif,2021,242000.0,945000.0,3.9
+Andhra Pradesh,Krishna,Maize,Rabi,2021,48000.0,326000.0,6.79
+Andhra Pradesh,Anantapur,Groundnut,Kharif,2021,680000.0,442000.0,0.65
+Andhra Pradesh,Kurnool,Cotton,Kharif,2021,210000.0,128000.0,0.61
+Andhra Pradesh,East Godavari,Rice,Kharif,2021,228000.0,912000.0,4.0
+Telangana,Warangal,Cotton,Kharif,2021,145000.0,92000.0,0.63
+Telangana,Warangal,Rice,Kharif,2021,118000.0,460000.0,3.9
+Telangana,Karimnagar,Rice,Rabi,2021,132000.0,541000.0,4.1
+Telangana,Nalgonda,Cotton,Kharif,2021,182000.0,112000.0,0.62
+Maharashtra,Pune,Sugarcane,Whole Year,2021,115000.0,11270000.0,98.0
+Maharashtra,Nashik,Wheat,Rabi,2021,84000.0,226000.0,2.69
+Maharashtra,Nagpur,Cotton,Kharif,2021,124000.0,71000.0,0.57
+Maharashtra,Nagpur,Soybean,Kharif,2021,138000.0,207000.0,1.5
+Maharashtra,Latur,Soybean,Kharif,2021,285000.0,399000.0,1.4
+Maharashtra,Latur,Pulses,Kharif,2021,112000.0,95000.0,0.85
+Maharashtra,Kolhapur,Sugarcane,Whole Year,2021,158000.0,15800000.0,100.0
+Karnataka,Belagavi,Sugarcane,Whole Year,2021,210000.0,19100000.0,90.95
+Karnataka,Dharwad,Cotton,Kharif,2021,82000.0,45000.0,0.55
+Karnataka,Davanagere,Maize,Kharif,2021,165000.0,643000.0,3.9
+Karnataka,Ballari,Rice,Kharif,2021,98000.0,362000.0,3.69
+Uttar Pradesh,Meerut,Sugarcane,Whole Year,2021,92000.0,7360000.0,80.0
+Uttar Pradesh,Meerut,Wheat,Rabi,2021,78000.0,327000.0,4.19
+Uttar Pradesh,Aligarh,Wheat,Rabi,2021,182000.0,764000.0,4.2
+Uttar Pradesh,Varanasi,Rice,Kharif,2021,46000.0,128000.0,2.78
+Uttar Pradesh,Gorakhpur,Rice,Kharif,2021,172000.0,481000.0,2.8
+Madhya Pradesh,Indore,Soybean,Kharif,2021,218000.0,283000.0,1.3
+Madhya Pradesh,Indore,Wheat,Rabi,2021,142000.0,596000.0,4.2
+Madhya Pradesh,Ujjain,Soybean,Kharif,2021,440000.0,528000.0,1.2
+Madhya Pradesh,Ujjain,Wheat,Rabi,2021,290000.0,1247000.0,4.3
+Madhya Pradesh,Hoshangabad,Wheat,Rabi,2021,288000.0,1382000.0,4.8
+Gujarat,Rajkot,Groundnut,Kharif,2021,272000.0,489000.0,1.8
+Gujarat,Rajkot,Cotton,Kharif,2021,245000.0,161000.0,0.66
+Gujarat,Surendranagar,Cotton,Kharif,2021,365000.0,226000.0,0.62
+Tamil Nadu,Thanjavur,Rice,Kharif,2021,178000.0,694000.0,3.9
+Tamil Nadu,Thiruvarur,Rice,Kharif,2021,154000.0,600000.0,3.9
+Tamil Nadu,Villupuram,Sugarcane,Whole Year,2021,48000.0,4800000.0,100.0
+West Bengal,Burdwan,Rice,Kharif,2021,485000.0,1552000.0,3.2
+West Bengal,Burdwan,Rice,Rabi,2022,182000.0,728000.0,4.0
+West Bengal,Hooghly,Rice,Kharif,2021,198000.0,613000.0,3.1
+Rajasthan,Sri Ganganagar,Wheat,Rabi,2021,312000.0,1341000.0,4.3
+Rajasthan,Sri Ganganagar,Mustard,Rabi,2021,142000.0,241000.0,1.7
+Rajasthan,Alwar,Mustard,Rabi,2021,268000.0,455000.0,1.7
+Odisha,Bargarh,Rice,Kharif,2021,224000.0,672000.0,3.0
+Odisha,Cuttack,Rice,Kharif,2021,142000.0,383000.0,2.7
+Bihar,Rohtas,Rice,Kharif,2021,164000.0,524000.0,3.2
+Bihar,Rohtas,Wheat,Rabi,2021,158000.0,505000.0,3.2
+Bihar,Khagaria,Maize,Rabi,2021,68000.0,442000.0,6.5

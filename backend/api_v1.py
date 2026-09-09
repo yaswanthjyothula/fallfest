@@ -42,6 +42,16 @@ from backend.services.supabase_service import get_supabase_status, sync_predicti
 from backend.services.risk_engine import evaluate_farm_risk
 from backend.services.explainability_service import compute_prediction_explainability
 from backend.services.disease_service import diagnose_crop_image
+from backend.services.india_geo_service import (
+    is_coordinates_inside_india,
+    validate_india_location,
+    resolve_pincode,
+    INDIA_NON_SUPPORTED_MESSAGE,
+)
+from backend.services.imd_weather_service import ImdWeatherService
+from backend.services.mosdac_service import IsroMosdacService
+from backend.services.market_service import IndianMandiMarketService, BENCHMARK_MANDI_DATABASE
+from pathlib import Path
 
 from data.generator import get_train_test_agronomic_data, scale_for_quantum
 from core.quantum_engine import AgriQuantumEngine
@@ -76,6 +86,9 @@ _RECOMMENDER = PrecisionAgronomyRecommender(
 )
 
 _SATELLITE_SERVICE = CopernicusSentinelService()
+_IMD_WEATHER_SERVICE = ImdWeatherService()
+_MOSDAC_SERVICE = IsroMosdacService()
+_MARKET_SERVICE = IndianMandiMarketService()
 
 
 # ==============================================================================
@@ -139,6 +152,7 @@ def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/auth/me", response_model=schemas.UserResponse)
 @router.get("/users/me", response_model=schemas.UserResponse)
 def get_authenticated_profile(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Returns the authenticated user's profile based on valid JWT bearer token."""
@@ -157,10 +171,10 @@ def get_current_user_profile(
     Returns profile information for the active test user (Yaswanth),
     dynamically computed with real farm holding counts.
     """
-    # Prefer farmer_eval_2026 or test@gmail.com or first user
-    user = db.query(models.User).filter_by(email="farmer_eval_2026@agriquantum.com").first()
+    # Prefer test@gmail.com for local developer and test account
+    user = db.query(models.User).filter_by(email="test@gmail.com").first()
     if not user:
-        user = db.query(models.User).filter_by(email="test@gmail.com").first()
+        user = db.query(models.User).filter_by(email="farmer_eval_2026@agriquantum.com").first()
     if not user:
         user = models.User(
             email="test@gmail.com",
@@ -171,8 +185,8 @@ def get_current_user_profile(
         db.add(user)
         db.commit()
         db.refresh(user)
-    elif "jaswanth" in user.full_name.lower():
-        user.full_name = user.full_name.replace("Jaswanth", "Yaswanth").replace("jaswanth", "Yaswanth")
+    elif user.full_name in ["Jaswanth", "Yaswanth Farmer", "Jaswanth Farmer"] or "jaswanth" in user.full_name.lower():
+        user.full_name = "Yaswanth"
         db.commit()
         db.refresh(user)
 
@@ -186,7 +200,7 @@ def get_current_user_profile(
         is_active=user.is_active,
         created_at=user.created_at,
         farm_count=farm_count,
-        location_preference="Andhra Pradesh, India",
+        location_preference="India",
     )
 
 
@@ -263,6 +277,15 @@ def create_farm(
     db: Session = Depends(get_db),
 ):
     """Creates a new farm record associated with the active authenticated user."""
+    if not is_coordinates_inside_india(payload.latitude, payload.longitude):
+        raise HTTPException(
+            status_code=400,
+            detail="This version of AgriQuantum currently supports agricultural analysis within India."
+        )
+
+    _, _, loc_meta = validate_india_location(payload.latitude, payload.longitude)
+    resolved_state = payload.state or (loc_meta["state"] if loc_meta else "National")
+
     user = db.query(models.User).filter_by(email="test@gmail.com").first()
     if not user:
         user = models.User(
@@ -279,8 +302,8 @@ def create_farm(
         user_id=user.id,
         name=payload.name,
         location=payload.location,
-        state=payload.state,
-        country=payload.country,
+        state=resolved_state,
+        country="India",
         latitude=payload.latitude,
         longitude=payload.longitude,
         total_area_hectares=payload.total_area_hectares,
@@ -307,6 +330,15 @@ def setup_and_analyze_farm(
     6. Generates crop-specific Nitrogen & Irrigation optimization recommendations
     7. Computes economic upside & persists farm timeline event
     """
+    if not is_coordinates_inside_india(payload.latitude, payload.longitude):
+        raise HTTPException(
+            status_code=400,
+            detail="This version of AgriQuantum currently supports agricultural analysis within India."
+        )
+
+    _, _, loc_meta = validate_india_location(payload.latitude, payload.longitude)
+    resolved_state = payload.state or (loc_meta["state"] if loc_meta else "National")
+
     # 1. Resolve User
     user = db.query(models.User).filter_by(email="test@gmail.com").first()
     if not user:
@@ -325,8 +357,8 @@ def setup_and_analyze_farm(
         user_id=user.id,
         name=payload.farm_name,
         location=payload.location,
-        state=payload.state or "Andhra Pradesh",
-        country=payload.country or "India",
+        state=resolved_state,
+        country="India",
         latitude=payload.latitude,
         longitude=payload.longitude,
         total_area_hectares=payload.total_area_hectares,
@@ -1344,6 +1376,195 @@ def get_farm_weather_intelligence_endpoint(farm_id: int, db: Session = Depends(g
 
     data = get_weather_intelligence(farm_id=farm_id, latitude=lat, longitude=lon, farm_name=name)
     return schemas.WeatherIntelligenceResponse(**data)
+
+
+# ==============================================================================
+# INDIA-ONLY GEOGRAPHIC & REGIONAL PINCODE ENDPOINTS
+# ==============================================================================
+@router.post("/geo/validate-boundary", response_model=schemas.IndiaBoundaryValidationResponse)
+def validate_boundary_endpoint(req: schemas.IndiaBoundaryValidationRequest):
+    """
+    Validates whether coordinates reside within the sovereign bounds of India.
+    Returns administrative metadata (State, District, Agro-Climatic Zone) or strict rejection message.
+    """
+    is_valid, msg, meta = validate_india_location(req.latitude, req.longitude)
+    if not is_valid:
+        return schemas.IndiaBoundaryValidationResponse(
+            is_valid=False,
+            message="This version of AgriQuantum currently supports agricultural analysis within India.",
+            state=None,
+            district=None,
+            country="Outside India",
+            agro_climatic_zone_id=None,
+            agro_climatic_zone_name=None,
+            reference_soil=None,
+        )
+    return schemas.IndiaBoundaryValidationResponse(
+        is_valid=True,
+        message="Valid Indian agricultural coordinate verified.",
+        state=meta.get("state") if meta else None,
+        district=meta.get("district") if meta else None,
+        country="India",
+        agro_climatic_zone_id=meta.get("agro_climatic_zone_id") if meta else None,
+        agro_climatic_zone_name=meta.get("agro_climatic_zone_name") if meta else None,
+        reference_soil=meta.get("reference_soil") if meta else None,
+    )
+
+
+@router.get("/geo/pincode/{pincode}")
+def resolve_pincode_endpoint(pincode: str):
+    """
+    Resolves a 6-digit Indian PIN code to City, District, State,
+    Coordinates, Agro-climatic Zone, recommended crops, and reference soil.
+    """
+    result = resolve_pincode(pincode)
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail=f"PIN Code {pincode} could not be resolved to a valid Indian postal division."
+        )
+    return result
+
+
+# ==============================================================================
+# OFFICIAL IMD WEATHER WARNINGS & DOPPLER RADAR NOWCAST ENDPOINTS
+# ==============================================================================
+@router.get("/weather/warnings", response_model=schemas.ImdWeatherWarningsResponse)
+def get_weather_warnings_endpoint(
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """Retrieves official IMD severe weather warnings and agrometeorological advisories."""
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if not farm:
+            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
+        latitude, longitude = farm.latitude, farm.longitude
+    elif latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
+
+    if not is_coordinates_inside_india(latitude, longitude):
+        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
+
+    warnings = _IMD_WEATHER_SERVICE.get_weather_warnings(latitude, longitude)
+    return schemas.ImdWeatherWarningsResponse(**warnings)
+
+
+@router.get("/weather/nowcast", response_model=schemas.ImdNowcastResponse)
+def get_weather_nowcast_endpoint(
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """Retrieves Doppler Weather Radar short-term nowcast (next 2-3 hours) from IMD."""
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if not farm:
+            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
+        latitude, longitude = farm.latitude, farm.longitude
+    elif latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
+
+    if not is_coordinates_inside_india(latitude, longitude):
+        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
+
+    nowcast = _IMD_WEATHER_SERVICE.get_nowcast(latitude, longitude)
+    return schemas.ImdNowcastResponse(**nowcast)
+
+
+# ==============================================================================
+# ISRO MOSDAC SATELLITE & REMOTE SENSING ENDPOINTS
+# ==============================================================================
+@router.get("/satellite/mosdac")
+def get_mosdac_satellite_endpoint(
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves ISRO MOSDAC near-real-time satellite observation (INSAT-3DR LST, Hydro-Estimator).
+    """
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if not farm:
+            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
+        latitude, longitude = farm.latitude, farm.longitude
+    elif latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
+
+    if not is_coordinates_inside_india(latitude, longitude):
+        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
+
+    obs = _MOSDAC_SERVICE.get_latest_satellite_observation(latitude, longitude)
+    catalog = _MOSDAC_SERVICE.list_available_products()
+    return {
+        "observation": obs,
+        "product_catalog": catalog,
+        "traceability": {
+            "authority": "Space Applications Centre (SAC), ISRO, Ahmedabad",
+            "portal": "https://mosdac.gov.in",
+            "observation_label": "LATEST OBSERVATION",
+        }
+    }
+
+
+# ==============================================================================
+# INDIAN MANDI (AGMARKNET / e-NAM) MARKET INTELLIGENCE ENDPOINTS
+# ==============================================================================
+@router.get("/market/prices", response_model=schemas.MandiPricesResponse)
+def get_mandi_prices_endpoint(
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    crop: Optional[str] = None,
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves daily agricultural mandi market prices from AGMARKNET / e-NAM.
+    Labels data as 'DAILY MARKET DATA' and filters by State, District, and Commodity.
+    """
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if farm:
+            if not state:
+                state = farm.state
+            latitude, longitude = farm.latitude, farm.longitude
+
+    res = _MARKET_SERVICE.get_mandi_prices(
+        state=state,
+        district=district,
+        crop=crop,
+        latitude=latitude,
+        longitude=longitude,
+    )
+    return schemas.MandiPricesResponse(**res)
+
+
+@router.get("/market/crops")
+def get_mandi_crops_list():
+    """Returns list of all commodities actively tracked in the Indian Mandi Network."""
+    commodities = sorted(list({r["commodity"] for r in BENCHMARK_MANDI_DATABASE}))
+    return {"commodities": commodities, "source": "AGMARKNET Commodity Master"}
+
+
+# ==============================================================================
+# DATA SOURCES MANIFEST & PROVENANCE TRACEABILITY
+# ==============================================================================
+@router.get("/data-sources", response_model=schemas.DataSourcesManifestResponse)
+def get_data_sources_manifest():
+    """Returns the comprehensive Data Sources manifest for platform provenance and traceability."""
+    manifest_path = Path("data/data_sources.json")
+    if manifest_path.exists():
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return schemas.DataSourcesManifestResponse(sources=data)
+    raise HTTPException(status_code=404, detail="Data sources manifest not found.")
 
 
 @router.post("/quantum/weather-scenario", response_model=schemas.QuantumWeatherScenarioResponse)

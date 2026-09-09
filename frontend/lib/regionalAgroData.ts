@@ -25,6 +25,7 @@ export interface ConfirmedSoil {
   characteristics: string;
   phRange: string;
   organicMatterTypical: string;
+  sourceClassification?: string;
 }
 
 export interface PincodeResolutionResult {
@@ -38,6 +39,27 @@ export interface PincodeResolutionResult {
   longitude: number;
   soil: ConfirmedSoil;
   crops: RegionalCrop[];
+}
+
+// India Geographic Scope: 28 States & 8 Union Territories
+export const INDIA_BOUNDS = {
+  minLat: 6.5,
+  maxLat: 37.5,
+  minLon: 68.0,
+  maxLon: 97.5,
+};
+
+export const INDIA_NON_SUPPORTED_MESSAGE =
+  "This version of AgriQuantum currently supports agricultural analysis within India.";
+
+export function isCoordinatesInsideIndia(lat?: number | null, lon?: number | null): boolean {
+  if (lat == null || lon == null || isNaN(lat) || isNaN(lon)) return false;
+  return (
+    lat >= INDIA_BOUNDS.minLat &&
+    lat <= INDIA_BOUNDS.maxLat &&
+    lon >= INDIA_BOUNDS.minLon &&
+    lon <= INDIA_BOUNDS.maxLon
+  );
 }
 
 // ============================================================================
@@ -655,14 +677,18 @@ export async function resolvePincode(pincodeInput: string): Promise<PincodeResol
 
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data) && data[0]?.Status === "Success" && Array.isArray(data[0]?.PostOffice)) {
+        if (Array.isArray(data) && data[0]?.Status === "Success" && Array.isArray(data[0]?.PostOffice) && data[0].PostOffice.length > 0) {
           const po = data[0].PostOffice[0];
           const detectedCity = po.District || po.Division || po.Taluk || entry?.city || "Local District";
-          const detectedState = po.State || entry?.state || "Andhra Pradesh";
-          const detectedPlace = po.Name || po.Block || entry?.place || `${cleanPin} Area`;
+          const detectedState = po.State || entry?.state || "National";
+          const detectedPlace = po.Name || po.Block || entry?.place || `${cleanPin} Post Office`;
 
           const soil = getConfirmedSoilType(detectedState, detectedCity);
           const crops = getRegionalCrops(detectedState, detectedCity);
+
+          // Use entry coordinates if available, or state/prefix centroid
+          const resolvedLat = entry ? entry.lat : 20.5937;
+          const resolvedLon = entry ? entry.lon : 78.9629;
 
           return {
             pincode: cleanPin,
@@ -671,8 +697,8 @@ export async function resolvePincode(pincodeInput: string): Promise<PincodeResol
             district: po.District || detectedCity,
             state: detectedState,
             country: po.Country || "India",
-            latitude: entry ? entry.lat : (soil.soilType.includes("Black") ? 16.3067 : 28.6139),
-            longitude: entry ? entry.lon : (soil.soilType.includes("Black") ? 80.4365 : 77.2090),
+            latitude: resolvedLat,
+            longitude: resolvedLon,
             soil,
             crops,
           };

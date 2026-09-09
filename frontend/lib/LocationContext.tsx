@@ -9,6 +9,7 @@ import React, {
   useCallback,
   ReactNode,
 } from "react";
+import { isCoordinatesInsideIndia, INDIA_NON_SUPPORTED_MESSAGE } from "./regionalAgroData";
 
 export interface UserLocation {
   latitude: number;
@@ -38,6 +39,7 @@ export interface LocationContextType {
   userLocation: UserLocation | null;
   lastKnownLocation: UserLocation | null;
   locationStatus: LocationStatus;
+  locationError: string | null;
   isWatching: boolean;
   accuracy: number | undefined;
   timestamp: number | undefined;

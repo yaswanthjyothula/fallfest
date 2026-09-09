@@ -369,3 +369,119 @@ class ModelBenchmarkRecord(Base):
     environment_json = Column(Text, nullable=True)  # JSON string of CPU, memory, python, qiskit version
 
 
+class WeatherForecast(Base):
+    __tablename__ = "weather_forecasts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=True, index=True)
+    forecast_date = Column(String(50), nullable=False, index=True)
+    temp_max = Column(Float, nullable=False)
+    temp_min = Column(Float, nullable=False)
+    precipitation_probability = Column(Float, default=0.0, nullable=False)
+    rainfall_mm = Column(Float, default=0.0, nullable=False)
+    humidity = Column(Float, nullable=True)
+    condition = Column(String(100), default="Clear", nullable=False)
+    source = Column(String(50), default="IMD", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class WeatherAlert(Base):
+    __tablename__ = "weather_alerts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=True, index=True)
+    state = Column(String(100), nullable=False, index=True)
+    district = Column(String(100), nullable=True, index=True)
+    severity = Column(String(50), default="Moderate", nullable=False)  # Green/No Warning, Yellow/Watch, Orange/Alert, Red/Warning
+    headline = Column(String(255), nullable=False)
+    description = Column(Text, nullable=False)
+    warning_type = Column(String(100), default="Agrometeorological Advisory", nullable=False)
+    valid_until = Column(DateTime, nullable=True)
+    source = Column(String(50), default="IMD Mausam", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class MandiMarketPrice(Base):
+    __tablename__ = "mandi_market_prices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=True, index=True)
+    state = Column(String(100), nullable=False, index=True)
+    district = Column(String(100), nullable=False, index=True)
+    market_name = Column(String(150), nullable=False, index=True)  # APMC Mandi
+    commodity = Column(String(100), nullable=False, index=True)
+    variety = Column(String(100), default="Local", nullable=False)
+    min_price_inr_q = Column(Float, nullable=False)
+    modal_price_inr_q = Column(Float, nullable=False)
+    max_price_inr_q = Column(Float, nullable=False)
+    arrivals_tonnes = Column(Float, default=15.0, nullable=False)
+    market_date = Column(String(50), nullable=False, index=True)
+    source = Column(String(50), default="AGMARKNET / e-NAM", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class LocationRecord(Base):
+    __tablename__ = "location_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    accuracy = Column(Float, nullable=True)
+    source = Column(String(50), default="gps", nullable=False)  # gps, manual, farm, last_known
+    city = Column(String(100), nullable=True)
+    district = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    country = Column(String(100), default="India", nullable=False)
+    timestamp = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class NdviObservation(Base):
+    __tablename__ = "ndvi_observations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id", ondelete="CASCADE"), nullable=False, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=True, index=True)
+    observed_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    ndvi = Column(Float, nullable=True)
+    red_band = Column(Float, nullable=True)  # B4
+    nir_band = Column(Float, nullable=True)  # B8
+    cloud_coverage = Column(Float, default=0.0, nullable=False)
+    satellite_source = Column(String(100), default="Copernicus Sentinel-2 L2A", nullable=False)
+    status = Column(String(50), default="OBSERVED", nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class ScenarioSimulation(Base):
+    __tablename__ = "scenario_simulations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    scenario_name = Column(String(150), nullable=False)
+    params_json = Column(Text, nullable=False)
+    predicted_yield = Column(Float, nullable=False)
+    delta_yield_pct = Column(Float, nullable=False)
+    economic_impact_inr = Column(Float, nullable=False)
+    simulated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class RiskRecord(Base):
+    __tablename__ = "risk_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String(100), nullable=False)
+    risk_level = Column(String(50), default="Low", nullable=False)
+    score = Column(Float, default=0.25, nullable=False)
+    headline = Column(String(255), nullable=False)
+    explanation = Column(Text, nullable=False)
+    mitigation = Column(Text, nullable=False)
+    source = Column(String(50), default="AgriQuantum Risk Engine", nullable=False)
+    evaluated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+

@@ -1,0 +1,9 @@
+{
+  "source": "Directorate of Economics and Statistics (DES), Ministry of Agriculture and Farmers Welfare, Govt of India",
+  "dataset_name": "District-wise Crop Production Statistics (DES)",
+  "download_url": "https://aps.dac.gov.in / https://data.gov.in",
+  "record_count": 64,
+  "license": "Government Open Data License - India (GODL)",
+  "geography": "India (State / District level)",
+  "staged_file": "data\\raw\\des_raw_district_crop_production.csv"
+}

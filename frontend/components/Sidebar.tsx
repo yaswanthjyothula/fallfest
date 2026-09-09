@@ -19,6 +19,7 @@ import {
   Sliders,
   Layers,
   CloudSun,
+  ShieldCheck,
 } from "lucide-react";
 
 interface NavItem {
@@ -39,6 +40,7 @@ const NAV_ITEMS: NavItem[] = [
   { name: "Crop Health", href: "/dashboard/crop-health", icon: Leaf },
   { name: "Weather", href: "/dashboard/weather", icon: CloudSun },
   { name: "Agricultural Data", href: "/dashboard/data", icon: Database },
+  { name: "Data Sources", href: "/dashboard/data-sources", icon: ShieldCheck },
   { name: "Reports", href: "/dashboard/reports", icon: FileCheck2 },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
   { name: "Help and Support", href: "/dashboard/help", icon: HelpCircle },

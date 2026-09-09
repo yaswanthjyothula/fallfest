@@ -45,6 +45,9 @@ class UserProfile(BaseModel):
         from_attributes = True
 
 
+UserResponse = UserProfile
+
+
 # ==============================================================================
 # FARM & FIELD SCHEMAS
 # ==============================================================================
@@ -894,8 +897,8 @@ class FarmSetupRequest(BaseModel):
     # Farm Info
     farm_name: str = Field(..., min_length=2, max_length=150, description="Farm identifier name")
     location: str = Field(..., min_length=2, max_length=200, description="District / Region name")
-    city: Optional[str] = "Guntur"
-    state: Optional[str] = "Andhra Pradesh"
+    city: Optional[str] = None
+    state: Optional[str] = None
     country: str = Field(default="India")
     pincode: Optional[str] = Field(default=None, description="Postal PIN / Zip Code")
     latitude: float = Field(..., ge=-90.0, le=90.0, description="GPS Latitude")
@@ -1068,4 +1071,96 @@ class UserLocationResponse(BaseModel):
     state: Optional[str]
     country: Optional[str]
     timestamp: datetime
+
+
+# ==============================================================================
+# INDIA BOUNDARY & DATA INTEGRATION SCHEMAS
+# ==============================================================================
+class IndiaBoundaryValidationRequest(BaseModel):
+    latitude: float = Field(..., description="Latitude to validate")
+    longitude: float = Field(..., description="Longitude to validate")
+
+
+class IndiaBoundaryValidationResponse(BaseModel):
+    is_valid_india: bool
+    state: Optional[str] = None
+    district: Optional[str] = None
+    agro_climatic_zone_id: Optional[int] = None
+    agro_climatic_zone_name: Optional[str] = None
+    reference_soil: Optional[str] = None
+    message: Optional[str] = None
+
+
+class ImdWeatherWarningItem(BaseModel):
+    severity: str  # Green, Yellow, Orange, Red
+    headline: str
+    description: str
+    warning_type: str
+    valid_until: Optional[str] = None
+    source: str = "IMD Mausam"
+
+
+class ImdWeatherWarningsResponse(BaseModel):
+    state: str
+    district: Optional[str] = None
+    station_name: Optional[str] = None
+    source: str = "India Meteorological Department (IMD)"
+    retrieved_at_ist: str
+    freshness_badge: str = "WARNING"
+    warnings: List[ImdWeatherWarningItem]
+
+
+class ImdNowcastResponse(BaseModel):
+    station_or_district: str
+    nowcast_summary: str
+    radar_observation: str
+    rain_probability_pct: float
+    issued_at_ist: str
+    valid_until_ist: str
+    source: str = "IMD Doppler Weather Radar & Nowcast Service"
+    freshness_badge: str = "NOWCAST"
+
+
+class MandiPriceItem(BaseModel):
+    state: str
+    district: str
+    market_name: str
+    commodity: str
+    variety: str
+    min_price_inr_q: float
+    modal_price_inr_q: float
+    max_price_inr_q: float
+    arrivals_tonnes: float
+    market_date: str
+    source: str = "AGMARKNET / e-NAM"
+    freshness_badge: str = "DAILY MARKET DATA"
+
+
+class MandiPricesResponse(BaseModel):
+    query_crop: str
+    state: str
+    district: Optional[str] = None
+    market_count: int
+    items: List[MandiPriceItem]
+    retrieved_at_ist: str
+    source: str = "Directorate of Marketing & Inspection (DMI) / AGMARKNET"
+    freshness_badge: str = "DAILY MARKET DATA"
+
+
+class DataSourceManifestItem(BaseModel):
+    name: str
+    category: str
+    source_agency: str
+    official_url: str
+    update_cadence: str
+    freshness_label: str
+    coverage: str
+    description: str
+
+
+class DataSourcesManifestResponse(BaseModel):
+    platform: str = "AgriQuantum Precision Agriculture Intelligence Platform"
+    geographic_scope: str = "India (28 States, 8 Union Territories)"
+    authoritative_sources: Dict[str, DataSourceManifestItem]
+    last_verified: str
 
