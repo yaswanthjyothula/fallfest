@@ -235,12 +235,12 @@ export default function FarmManagementPage() {
                 const geo = await res.json();
                 const address = geo.address || {};
                 const detectedCity = address.city || address.town || address.village || address.county || "Local Agro Zone";
-                const detectedState = address.state || "Andhra Pradesh";
+                const detectedState = address.state || address.country || "";
                 const detectedPostcode = (address.postcode || "").replace(/\D/g, "").slice(0, 6);
                 applyLocationUpdate(
                   detectedCity,
                   detectedState,
-                  `${detectedCity}, ${detectedState}`,
+                  detectedState ? `${detectedCity}, ${detectedState}` : detectedCity,
                   lat,
                   lon,
                   detectedPostcode || pincode
@@ -272,8 +272,12 @@ export default function FarmManagementPage() {
       return;
     }
 
-    const lat = isNaN(parseFloat(latitude)) ? 16.3067 : parseFloat(latitude);
-    const lon = isNaN(parseFloat(longitude)) ? 80.4365 : parseFloat(longitude);
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      setStatusMessage({ type: "error", text: "Please provide valid farm coordinates (-90 to 90 latitude, -180 to 180 longitude) or enter a PIN code." });
+      return;
+    }
     const area = parseFloat(totalArea);
     const n = parseFloat(nitrogen);
     const p = parseFloat(phosphorus);

@@ -1447,9 +1447,11 @@ def get_weather_risk_radar(farm_id: int, db: Session = Depends(get_db)):
     Crop Health Risk, Yield Risk, Input Risk) with contextual action paths.
     """
     farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-    lat = farm.latitude if farm else 16.5062
-    lon = farm.longitude if farm else 80.6480
-    name = farm.name if farm else "Target Farm"
+    if not farm:
+        raise HTTPException(status_code=404, detail="Farm not found")
+    lat = farm.latitude
+    lon = farm.longitude
+    name = farm.name
 
     weather = get_weather_intelligence(farm_id=farm_id, latitude=lat, longitude=lon, farm_name=name)
     cur = weather.get("current", {})
@@ -3006,4 +3008,59 @@ def detect_crop_disease(req: schemas.DiseaseDetectionRequest, db: Session = Depe
         cultural_controls=rec.cultural_controls,
         detected_at=rec.detected_at,
     )
+
+
+# ==============================================================================
+# REAL-TIME USER LOCATION TELEMETRY
+# ==============================================================================
+_USER_LATEST_LOCATIONS: Dict[int, schemas.UserLocationResponse] = {}
+
+
+@router.post("/location", response_model=schemas.UserLocationResponse)
+def record_user_location(
+    payload: schemas.UserLocationPayload,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Records the authenticated user's real-time geographic location.
+    Validates physical coordinates (-90 <= lat <= 90, -180 <= lon <= 180)
+    and isolates per user session. Never uses hardcoded fallbacks.
+    """
+    ts = payload.timestamp or datetime.now(timezone.utc)
+    rec = schemas.UserLocationResponse(
+        user_id=current_user.id,
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        accuracy=payload.accuracy,
+        altitude=payload.altitude,
+        heading=payload.heading,
+        speed=payload.speed,
+        source=payload.source,
+        city=payload.city,
+        district=payload.district,
+        state=payload.state,
+        country=payload.country,
+        timestamp=ts,
+    )
+    _USER_LATEST_LOCATIONS[current_user.id] = rec
+    return rec
+
+
+@router.get("/location", response_model=schemas.UserLocationResponse)
+def get_user_location(
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Returns the authenticated user's latest recorded location.
+    Raises 404 if no live location has been recorded yet.
+    """
+    loc = _USER_LATEST_LOCATIONS.get(current_user.id)
+    if not loc:
+        raise HTTPException(
+            status_code=404,
+            detail="No live location recorded for current user session. Please enable browser GPS or provide manual location.",
+        )
+    return loc
+
 

@@ -1029,3 +1029,38 @@ class FarmWeatherImpactResponse(BaseModel):
     stress_simulations: List[WeatherImpactScenarioItem]
     model_type_disclaimer: str = "Model Simulation — Evaluates classical vs quantum yield response under climate shock scenarios. Not a physical weather forecast."
     timestamp: datetime
+
+
+# ==============================================================================
+# USER REAL-TIME LOCATION SCHEMAS
+# ==============================================================================
+class UserLocationPayload(BaseModel):
+    latitude: float = Field(..., ge=-90.0, le=90.0, description="Latitude between -90 and 90")
+    longitude: float = Field(..., ge=-180.0, le=180.0, description="Longitude between -180 and 180")
+    accuracy: Optional[float] = Field(None, ge=0.0, description="GPS accuracy radius in meters")
+    altitude: Optional[float] = None
+    heading: Optional[float] = Field(None, ge=0.0, le=360.0)
+    speed: Optional[float] = Field(None, ge=0.0)
+    source: str = Field(default="gps", description="gps, manual, farm, or last_known")
+    city: Optional[str] = None
+    district: Optional[str] = None
+    state: Optional[str] = None
+    country: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+
+class UserLocationResponse(BaseModel):
+    user_id: int
+    latitude: float
+    longitude: float
+    accuracy: Optional[float]
+    altitude: Optional[float]
+    heading: Optional[float]
+    speed: Optional[float]
+    source: str
+    city: Optional[str]
+    district: Optional[str]
+    state: Optional[str]
+    country: Optional[str]
+    timestamp: datetime
+

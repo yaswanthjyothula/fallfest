@@ -381,6 +381,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     localStorage.removeItem("agri_auth_token");
     localStorage.removeItem("agri_auth_user");
+    localStorage.removeItem("agri_user_location");
+    localStorage.removeItem("agri_last_known_location");
   };
 
   // 8. Password Reset Request

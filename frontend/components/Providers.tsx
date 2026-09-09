@@ -2,11 +2,14 @@
 
 import React from "react";
 import { AuthProvider } from "@/lib/AuthContext";
+import { LocationProvider } from "@/lib/LocationContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      {children}
+      <LocationProvider>
+        {children}
+      </LocationProvider>
     </AuthProvider>
   );
 }

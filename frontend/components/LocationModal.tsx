@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { MapPin, Navigation, X, Check, Globe, AlertCircle, RefreshCw } from "lucide-react";
+import { MapPin, Navigation, X, Check, Globe, AlertCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { useUserLocation } from "@/lib/LocationContext";
 import { resolvePincode } from "@/lib/regionalAgroData";
 
 interface LocationModalProps {
@@ -13,7 +14,7 @@ interface LocationModalProps {
 const PRESET_LOCATIONS = [
   { city: "Visakhapatnam", region: "Andhra Pradesh", lat: 17.6868, lon: 83.2185 },
   { city: "Guntur", region: "Andhra Pradesh", lat: 16.3067, lon: 80.4365 },
-  { city: "Vijayawada", region: "Andhra Pradesh", lat: 16.5062, lon: 80.6480 },
+  { city: "Tirupati", region: "Andhra Pradesh", lat: 13.6288, lon: 79.4192 },
   { city: "Ludhiana", region: "Punjab", lat: 30.9010, lon: 75.8573 },
   { city: "Karnal", region: "Haryana", lat: 29.6857, lon: 76.9905 },
   { city: "Pune", region: "Maharashtra", lat: 18.5204, lon: 73.8567 },
@@ -21,7 +22,15 @@ const PRESET_LOCATIONS = [
 ];
 
 export function LocationModal({ isOpen, onClose }: LocationModalProps) {
-  const { location, locationLoading, requestLocationPermission, setManualLocation } = useAuth();
+  const { location, locationLoading, setManualLocation: setAuthManualLocation } = useAuth();
+  const {
+    userLocation,
+    locationStatus,
+    requestLocationPermission,
+    startWatching,
+    setManualLocation,
+  } = useUserLocation();
+
   const [modalPincode, setModalPincode] = useState("");
   const [resolvingModalPin, setResolvingModalPin] = useState(false);
   const [pincodeSuccess, setPincodeSuccess] = useState<string | null>(null);
@@ -45,7 +54,8 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
         if (res) {
           setPincodeSuccess(`${res.place || res.city}, ${res.district} (${res.state})`);
           if (cleaned.length === 6) {
-            setManualLocation(res.city, res.state, res.latitude, res.longitude);
+            setManualLocation(res.latitude, res.longitude, res.city, res.state);
+            setAuthManualLocation(res.city, res.state, res.latitude, res.longitude);
             setTimeout(() => {
               onClose();
             }, 500);
@@ -63,6 +73,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
     setLocError(null);
     const success = await requestLocationPermission();
     if (success) {
+      startWatching();
       onClose();
     } else {
       setLocError("Location access was denied or timed out. Please select your region below or enter coordinates manually.");
@@ -70,7 +81,8 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   };
 
   const handlePresetSelect = (preset: typeof PRESET_LOCATIONS[0]) => {
-    setManualLocation(preset.city, preset.region, preset.lat, preset.lon);
+    setManualLocation(preset.lat, preset.lon, preset.city, preset.region);
+    setAuthManualLocation(preset.city, preset.region, preset.lat, preset.lon);
     onClose();
   };
 
@@ -82,7 +94,8 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
       setLocError("Please provide valid decimal coordinates (e.g. 17.68, 83.21).");
       return;
     }
-    setManualLocation(manualCity || "Custom Farm", manualRegion || "Region", lat, lon);
+    setManualLocation(lat, lon, manualCity || "Custom Location", manualRegion || "Region");
+    setAuthManualLocation(manualCity || "Custom Location", manualRegion || "Region", lat, lon);
     onClose();
   };
 
@@ -109,17 +122,48 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           </button>
         </div>
 
+        {/* Location Notice */}
+        <div className="p-3 rounded-xl bg-blue-50/80 border border-blue-200 text-xs text-blue-950 flex items-start gap-2.5">
+          <ShieldCheck className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+          <p className="text-[11px] leading-relaxed text-blue-900">
+            AgriQuantum uses your location to show your current position, nearby environmental conditions, and location-aware agricultural insights. Your location is used only for features that require geographic context.
+          </p>
+        </div>
+
         {/* Current Location Status */}
         <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 text-xs space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-            Current Farm Region
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+              Active User Location
+            </span>
+            <span
+              className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                userLocation?.source === "gps"
+                  ? "bg-blue-50 text-blue-800 border-blue-200"
+                  : userLocation?.source === "manual"
+                  ? "bg-amber-50 text-amber-800 border-amber-200"
+                  : "bg-slate-100 text-slate-700 border-slate-200"
+              }`}
+            >
+              {userLocation?.source === "gps"
+                ? "● Live GPS"
+                : userLocation?.source === "manual"
+                ? "Manual"
+                : userLocation?.source === "last_known"
+                ? "Last Known"
+                : "Not Set"}
+            </span>
+          </div>
           <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-            <span>{location.formattedAddress}</span>
+            <span className="truncate">{userLocation?.formattedAddress || location.formattedAddress}</span>
           </div>
-          <div className="text-[10px] font-mono text-slate-400">
-            {location.latitude.toFixed(4)}°N, {location.longitude.toFixed(4)}°E • {location.isDetected ? "Detected via GPS" : "Pre-configured Region"}
+          <div className="text-[10px] font-mono text-slate-500">
+            {userLocation
+              ? `${userLocation.latitude.toFixed(4)}°N, ${userLocation.longitude.toFixed(4)}°E${
+                  userLocation.accuracy ? ` • Acc: ±${Math.round(userLocation.accuracy)}m` : ""
+                }`
+              : `${location.latitude.toFixed(4)}°N, ${location.longitude.toFixed(4)}°E`}
           </div>
         </div>
 
@@ -134,7 +178,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
         <button
           onClick={handleUseCurrentLocation}
           disabled={locationLoading}
-          className="w-full py-3 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
+          className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer disabled:opacity-50"
         >
           {locationLoading ? (
             <>
@@ -144,7 +188,7 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
           ) : (
             <>
               <Navigation className="w-4 h-4" />
-              <span>Detect My Current Location (GPS)</span>
+              <span>Enable Continuous Live Location (GPS)</span>
             </>
           )}
         </button>
