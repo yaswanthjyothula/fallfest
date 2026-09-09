@@ -316,6 +316,74 @@ class AgronomicBenchmarkSuite:
             "disclosed_limitations": "Quantum model utilizes a 4-qubit feature subspace (Soil Nitrogen, Soil Moisture, Rainfall, NDVI) to operate within NISQ statevector simulation limits without gate synthesis noise.",
         }
 
+        # Calculate actual residual histogram distributions across 8 uniform bins
+        residual_distributions: Dict[str, List[Dict[str, Any]]] = {}
+        for m_name, preds in self.test_predictions.items():
+            if m_name == "actual":
+                continue
+            res_arr = y_test - preds
+            counts, bin_edges = np.histogram(res_arr, bins=8)
+            bins_list = []
+            for b_idx in range(len(counts)):
+                bin_mid = round(float((bin_edges[b_idx] + bin_edges[b_idx + 1]) / 2.0), 2)
+                bins_list.append({
+                    "bin_range": f"{bin_edges[b_idx]:.2f} to {bin_edges[b_idx+1]:.2f}",
+                    "bin_center": bin_mid,
+                    "count": int(counts[b_idx]),
+                })
+            residual_distributions[m_name] = bins_list
+
+        # Calculate model perturbation robustness (Sensitivity analysis across ±10% agronomic shifts)
+        # Evaluates stability of predictions when environmental parameters vary within natural margins
+        robustness_perturbations = [
+            ("Soil Moisture +10%", np.array([1.0, 1.10, 1.0, 1.0])),
+            ("Soil Moisture -10%", np.array([1.0, 0.90, 1.0, 1.0])),
+            ("Seasonal Rainfall +10%", np.array([1.0, 1.0, 1.10, 1.0])),
+            ("Seasonal Rainfall -10%", np.array([1.0, 1.0, 0.90, 1.0])),
+            ("Soil Nitrogen +10%", np.array([1.10, 1.0, 1.0, 1.0])),
+            ("Canopy NDVI -0.05", np.array([1.0, 1.0, 1.0, 0.93])),
+        ]
+
+        # Subsample up to 10 representative test plots for rapid sensitivity evaluation
+        sub_idx = np.linspace(0, len(y_test) - 1, min(10, len(y_test)), dtype=int)
+        X_test_q_sub = X_test_quantum[sub_idx]
+        qsvr_sub_preds = qsvr_preds[sub_idx]
+        X_test_raw_sub = X_test_raw[sub_idx]
+        rf_sub_preds = rf_preds[sub_idx]
+        csvr_sub_preds = csvr_preds[sub_idx]
+        ridge_sub_preds = ridge_preds[sub_idx]
+
+        robustness_analysis = []
+        for pert_name, mult_vec in robustness_perturbations:
+            # Shift quantum test set
+            X_test_q_pert = np.clip(X_test_q_sub * mult_vec, 0.0, 2.0 * np.pi)
+            q_pert_preds = qsvr.predict(X_test_q_pert)
+            q_shift_pct = round(float(np.mean(np.abs(q_pert_preds - qsvr_sub_preds) / np.maximum(qsvr_sub_preds, 1e-3)) * 100.0), 2)
+
+            # Shift classical test set
+            X_test_raw_pert = X_test_raw_sub.copy()
+            for col_idx in range(min(4, X_test_raw_pert.shape[1])):
+                X_test_raw_pert[:, col_idx] = X_test_raw_pert[:, col_idx] * mult_vec[col_idx]
+            X_test_std_pert = scaler_classical.transform(X_test_raw_pert)
+
+            rf_pert_preds = rf.predict(X_test_raw_pert)
+            rf_shift_pct = round(float(np.mean(np.abs(rf_pert_preds - rf_sub_preds) / np.maximum(rf_sub_preds, 1e-3)) * 100.0), 2)
+
+            rbf_pert_preds = classical_svr.predict(X_test_std_pert)
+            rbf_shift_pct = round(float(np.mean(np.abs(rbf_pert_preds - csvr_sub_preds) / np.maximum(csvr_sub_preds, 1e-3)) * 100.0), 2)
+
+            ridge_pert_preds = ridge.predict(X_test_std_pert)
+            ridge_shift_pct = round(float(np.mean(np.abs(ridge_pert_preds - ridge_sub_preds) / np.maximum(ridge_sub_preds, 1e-3)) * 100.0), 2)
+
+            robustness_analysis.append({
+                "perturbation": pert_name,
+                "quantum_svr_delta_pct": q_shift_pct,
+                "random_forest_delta_pct": rf_shift_pct,
+                "rbf_svr_delta_pct": rbf_shift_pct,
+                "ridge_delta_pct": ridge_shift_pct,
+                "most_stable_model": "Quantum SVR (QSVR)" if q_shift_pct <= min(rf_shift_pct, rbf_shift_pct, ridge_shift_pct) else ("Random Forest" if rf_shift_pct <= min(rbf_shift_pct, ridge_shift_pct) else "Classical SVR (RBF)"),
+            })
+
         # Legacy dataframe for backward compatibility
         summary_df = pd.DataFrame(list(self.results.values()))
         summary_df = summary_df.sort_values(by="r2", ascending=False).reset_index(drop=True)
@@ -330,6 +398,8 @@ class AgronomicBenchmarkSuite:
             "quantum_details": quantum_details,
             "actual_vs_predicted": self.actual_vs_predicted,
             "residuals": self.residuals,
+            "residual_distributions": residual_distributions,
+            "robustness_analysis": robustness_analysis,
             "test_predictions": self.test_predictions,
             "y_test": y_test.tolist() if isinstance(y_test, np.ndarray) else y_test,
         }

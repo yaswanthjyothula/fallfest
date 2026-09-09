@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { MapPin, Navigation, X, Check, Globe, AlertCircle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
+import { resolvePincode } from "@/lib/regionalAgroData";
 
 interface LocationModalProps {
   isOpen: boolean;
@@ -21,6 +22,9 @@ const PRESET_LOCATIONS = [
 
 export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const { location, locationLoading, requestLocationPermission, setManualLocation } = useAuth();
+  const [modalPincode, setModalPincode] = useState("");
+  const [resolvingModalPin, setResolvingModalPin] = useState(false);
+  const [pincodeSuccess, setPincodeSuccess] = useState<string | null>(null);
   const [manualCity, setManualCity] = useState("");
   const [manualRegion, setManualRegion] = useState("");
   const [manualLat, setManualLat] = useState("");
@@ -29,6 +33,31 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
   const [locError, setLocError] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  const handleModalPincodeChange = async (val: string) => {
+    const cleaned = val.replace(/\D/g, "").slice(0, 6);
+    setModalPincode(cleaned);
+    setPincodeSuccess(null);
+    if (cleaned.length >= 2) {
+      setResolvingModalPin(true);
+      try {
+        const res = await resolvePincode(cleaned);
+        if (res) {
+          setPincodeSuccess(`${res.place || res.city}, ${res.district} (${res.state})`);
+          if (cleaned.length === 6) {
+            setManualLocation(res.city, res.state, res.latitude, res.longitude);
+            setTimeout(() => {
+              onClose();
+            }, 500);
+          }
+        }
+      } catch (err) {
+        console.warn("Modal pin error:", err);
+      } finally {
+        setResolvingModalPin(false);
+      }
+    }
+  };
 
   const handleUseCurrentLocation = async () => {
     setLocError(null);
@@ -119,6 +148,31 @@ export function LocationModal({ isOpen, onClose }: LocationModalProps) {
             </>
           )}
         </button>
+
+        {/* Action 1.5: Postal PIN Code Quick Finder */}
+        <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+              <span>Enter Postal PIN Code</span>
+              {resolvingModalPin && <RefreshCw className="w-3 h-3 text-emerald-700 animate-spin" />}
+            </span>
+            <span className="text-[10px] text-emerald-700 font-semibold">Instant Location & Soil</span>
+          </div>
+          <input
+            type="text"
+            maxLength={6}
+            placeholder="Type 6-digit PIN code (e.g. 522001, 141001, 411001)"
+            value={modalPincode}
+            onChange={(e) => handleModalPincodeChange(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-emerald-300 bg-white text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-700 shadow-2xs"
+          />
+          {pincodeSuccess && (
+            <div className="text-[11px] text-emerald-900 font-semibold flex items-center gap-1.5 pt-0.5">
+              <Check className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span className="truncate">Auto-detected: {pincodeSuccess}</span>
+            </div>
+          )}
+        </div>
 
         {/* Action 2: Quick Presets */}
         <div className="space-y-2">

@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useFarm } from "@/lib/FarmContext";
 import { useAuth } from "@/lib/AuthContext";
-import { Menu, MapPin, LogOut, Navigation, UserCheck } from "lucide-react";
+import { Menu, LogOut, Navigation, UserCheck } from "lucide-react";
 import { OfflineStatusBadge } from "@/components/OfflineStatusBadge";
 import { LocationModal } from "@/components/LocationModal";
 
@@ -123,38 +123,17 @@ export function Navbar({ onToggleMobile }: NavbarProps) {
 
         {/* Right: Location, Farm Selector, Offline badge, and Profile */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {/* Detected Location Chip (Clickable to change location) */}
+          {/* Farm Location Chip (Driven by Farm Analytics & Location) */}
           <button
             onClick={() => setIsLocationModalOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 transition cursor-pointer"
             title="Click to update farm location"
           >
-            <Navigation className="w-3 h-3 text-emerald-700" />
-            <span className="hidden md:inline max-w-[140px] truncate">
+            <Navigation className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+            <span className="max-w-[180px] truncate">
               {location.city}, {location.region}
             </span>
           </button>
-
-          {/* Farm Selector Dropdown */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
-            <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-            <select
-              value={activeFarmId || ""}
-              onChange={(e) => setActiveFarmId(Number(e.target.value))}
-              className="bg-transparent font-medium text-slate-800 focus:outline-none cursor-pointer text-xs pr-1"
-              aria-label="Select active farm"
-            >
-              {farms.length === 0 ? (
-                <option value="1">Krishna Basin Research Station (120 ha)</option>
-              ) : (
-                farms.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name} ({f.total_area_hectares} ha)
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
 
           {/* Offline Sync Status Badge */}
           <OfflineStatusBadge />

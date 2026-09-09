@@ -857,6 +857,8 @@ class BenchmarkResponse(BaseModel):
     quantum_details: QuantumModelTechnicalDetails
     actual_vs_predicted: Dict[str, List[BenchmarkScatterPoint]]
     residuals: Dict[str, List[BenchmarkResidualPoint]]
+    residual_distributions: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    robustness_analysis: Optional[List[Dict[str, Any]]] = None
 
 
 class BenchmarkRunRequest(BaseModel):
@@ -890,6 +892,7 @@ class FarmSetupRequest(BaseModel):
     city: Optional[str] = "Guntur"
     state: Optional[str] = "Andhra Pradesh"
     country: str = Field(default="India")
+    pincode: Optional[str] = Field(default=None, description="Postal PIN / Zip Code")
     latitude: float = Field(..., ge=-90.0, le=90.0, description="GPS Latitude")
     longitude: float = Field(..., ge=-180.0, le=180.0, description="GPS Longitude")
     total_area_hectares: float = Field(..., gt=0.1, le=50000.0, description="Total farm area")
@@ -960,5 +963,69 @@ class HarvestResultResponse(BaseModel):
         from_attributes = True
 
 
+# ==============================================================================
+# DUAL-ENGINE OPTIMIZATION & WEATHER IMPACT SCHEMAS
+# ==============================================================================
+
+class OptimizationScenarioRequest(BaseModel):
+    objective_type: str = Field(default="balanced_plan", description="maximum_yield, minimum_cost, minimum_water, balanced_plan")
+    current_nitrogen: float = Field(default=85.0, ge=10.0, le=300.0)
+    current_phosphorus: float = Field(default=45.0, ge=5.0, le=150.0)
+    current_potassium: float = Field(default=40.0, ge=5.0, le=150.0)
+    soil_moisture: float = Field(default=28.0, ge=5.0, le=60.0)
+    rainfall: float = Field(default=140.0, ge=0.0, le=1000.0)
+    ndvi: float = Field(default=0.62, ge=0.0, le=1.0)
+    budget_limit_usd_ha: Optional[float] = Field(default=240.0, ge=50.0, le=2000.0)
+    target_yield_q_acre: Optional[float] = Field(default=32.0, ge=10.0, le=60.0)
 
 
+class OptimizationSolutionItem(BaseModel):
+    method: str
+    nitrogen_kg_ha: float
+    phosphorus_kg_ha: float
+    potassium_kg_ha: float
+    irrigation_mm: float
+    predicted_yield_q_acre: float
+    predicted_yield_t_ha: float
+    input_cost_usd_ha: float
+    objective_score: float
+    runtime_ms: float
+    iterations: Optional[int] = None
+    tunneling_steps: Optional[int] = None
+    status: str
+
+
+class OptimizationScenarioResponse(BaseModel):
+    objective: str
+    classical_solution: OptimizationSolutionItem
+    quantum_inspired_solution: OptimizationSolutionItem
+    objective_delta: float
+    runtime_ratio: float
+    superior_method: str
+    scientific_assessment: str
+    constraints: Dict[str, Any]
+    timestamp: datetime
+
+
+class WeatherImpactScenarioItem(BaseModel):
+    scenario_id: str
+    name: str
+    description: str
+    temperature_shift_c: float
+    rainfall_shift_pct: float
+    classical_yield_q_acre: float
+    quantum_yield_q_acre: float
+    yield_delta_q_acre: float
+    risk_level: str
+    scientific_rationale: str
+
+
+class FarmWeatherImpactResponse(BaseModel):
+    farm_id: int
+    farm_name: str
+    observed_weather: Dict[str, Any]
+    baseline_classical_yield: float
+    baseline_quantum_yield: float
+    stress_simulations: List[WeatherImpactScenarioItem]
+    model_type_disclaimer: str = "Model Simulation — Evaluates classical vs quantum yield response under climate shock scenarios. Not a physical weather forecast."
+    timestamp: datetime

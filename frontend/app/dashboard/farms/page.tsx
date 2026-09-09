@@ -20,7 +20,6 @@ import {
   ShieldAlert,
   DollarSign,
   ArrowRight,
-  Sparkles,
   Info,
   Check,
   RefreshCw,
@@ -29,23 +28,17 @@ import {
 import { api, Farm, Field, Crop } from "@/lib/api";
 import { useFarm } from "@/lib/FarmContext";
 import { useAuth } from "@/lib/AuthContext";
-
-const CROPS_LIST = [
-  { name: "Winter Wheat", variety: "PBW-343 / HD-2967", season: "Rabi", defaultN: 115, defaultP: 45, defaultK: 50, defaultPH: 6.8, defaultMoisture: 28 },
-  { name: "Basmati Rice / Paddy", variety: "Pusa Basmati 1121 / Swarna", season: "Kharif", defaultN: 120, defaultP: 40, defaultK: 40, defaultPH: 6.5, defaultMoisture: 38 },
-  { name: "Hybrid Maize (Corn)", variety: "DKC-9108 / Pioneer P3396", season: "Kharif", defaultN: 130, defaultP: 50, defaultK: 60, defaultPH: 6.7, defaultMoisture: 26 },
-  { name: "Bt Cotton", variety: "RCH-659 BG II", season: "Kharif", defaultN: 140, defaultP: 55, defaultK: 65, defaultPH: 7.2, defaultMoisture: 24 },
-  { name: "Soybean", variety: "JS-335 / JS-9560", season: "Kharif", defaultN: 40, defaultP: 60, defaultK: 40, defaultPH: 6.8, defaultMoisture: 30 },
-  { name: "Sugarcane", variety: "Co-0238 / Co-86032", season: "Zaid", defaultN: 180, defaultP: 70, defaultK: 90, defaultPH: 7.0, defaultMoisture: 42 },
-  { name: "Tomato", variety: "Abhinav / NS-501", season: "Rabi", defaultN: 110, defaultP: 60, defaultK: 80, defaultPH: 6.5, defaultMoisture: 32 },
-  { name: "Potato", variety: "Kufri Jyoti / Kufri Pukhraj", season: "Rabi", defaultN: 140, defaultP: 80, defaultK: 100, defaultPH: 6.0, defaultMoisture: 30 },
-  { name: "Groundnut (Peanut)", variety: "TAG-24 / Kadiri-6", season: "Kharif", defaultN: 30, defaultP: 50, defaultK: 50, defaultPH: 6.5, defaultMoisture: 22 },
-  { name: "Mustard", variety: "Pusa Bold / Kranti", season: "Rabi", defaultN: 80, defaultP: 40, defaultK: 30, defaultPH: 7.0, defaultMoisture: 20 },
-];
+import {
+  resolvePincode,
+  getConfirmedSoilType,
+  getRegionalCrops,
+  RegionalCrop,
+  ConfirmedSoil,
+} from "@/lib/regionalAgroData";
 
 const SOIL_TYPES = [
-  "Alluvial Loam",
   "Black Soil (Vertisol)",
+  "Alluvial Loam",
   "Red Sandy Loam",
   "Clay Loam",
   "Laterite Soil",
@@ -64,37 +57,47 @@ const GROWTH_STAGES = [
 export default function FarmManagementPage() {
   const router = useRouter();
   const { activeFarmId, setActiveFarmId, refreshFarms, farms } = useFarm();
-  const { user } = useAuth();
+  const { user, location } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"setup" | "farms" | "harvest">("setup");
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Form State
+  // Form State with Postal PIN Code & Location
+  const [pincode, setPincode] = useState("522001");
+  const [resolvingPin, setResolvingPin] = useState(false);
   const [farmName, setFarmName] = useState("");
   const [locationName, setLocationName] = useState("Krishna River Basin (Zone 4B)");
   const [city, setCity] = useState("Guntur");
   const [stateName, setStateName] = useState("Andhra Pradesh");
   const [country, setCountry] = useState("India");
-  const [latitude, setLatitude] = useState("16.5062");
-  const [longitude, setLongitude] = useState("80.6480");
+  const [latitude, setLatitude] = useState("16.3067");
+  const [longitude, setLongitude] = useState("80.4365");
   const [totalArea, setTotalArea] = useState("25.0");
   const [areaUnit, setAreaUnit] = useState<"Hectares" | "Acres">("Hectares");
 
-  const [selectedCrop, setSelectedCrop] = useState("Winter Wheat");
-  const [cropVariety, setCropVariety] = useState("PBW-343 / HD-2967");
-  const [season, setSeason] = useState("Rabi");
+  // Regional Agro Intelligence State (dynamically driven by location/pincode)
+  const [regionalCrops, setRegionalCrops] = useState<RegionalCrop[]>(() =>
+    getRegionalCrops("Andhra Pradesh", "Guntur")
+  );
+  const [confirmedSoil, setConfirmedSoil] = useState<ConfirmedSoil>(() =>
+    getConfirmedSoilType("Andhra Pradesh", "Guntur")
+  );
+
+  const [selectedCrop, setSelectedCrop] = useState("Basmati & Sona Masoori Paddy (Rice)");
+  const [cropVariety, setCropVariety] = useState("BPT-5204 (Samba Mahsuri) / MTU-1010");
+  const [season, setSeason] = useState("Kharif");
   const [growthStage, setGrowthStage] = useState("Stem Elongation / Jointing");
   const [plantingDate, setPlantingDate] = useState("2025-11-15");
   const [harvestDate, setHarvestDate] = useState("2026-03-30");
 
-  const [nitrogen, setNitrogen] = useState("115.0");
+  const [nitrogen, setNitrogen] = useState("120.0");
   const [phosphorus, setPhosphorus] = useState("45.0");
-  const [potassium, setPotassium] = useState("50.0");
-  const [soilPh, setSoilPh] = useState("6.8");
-  const [soilMoisture, setSoilMoisture] = useState("28.0");
+  const [potassium, setPotassium] = useState("45.0");
+  const [soilPh, setSoilPh] = useState("6.5");
+  const [soilMoisture, setSoilMoisture] = useState("38.0");
   const [organicMatter, setOrganicMatter] = useState("0.75");
-  const [soilType, setSoilType] = useState("Alluvial Loam");
+  const [soilType, setSoilType] = useState("Black Soil (Vertisol)");
 
   // Geolocation lookup state
   const [detectingLocation, setDetectingLocation] = useState(false);
@@ -121,9 +124,89 @@ export default function FarmManagementPage() {
     }
   }, [farms, harvestFarmId]);
 
+  // Helper to apply location & synchronize soil and crops
+  const applyLocationUpdate = (
+    newCity: string,
+    newState: string,
+    newPlace?: string,
+    lat?: number,
+    lon?: number,
+    newCode?: string
+  ) => {
+    if (newCity) setCity(newCity);
+    if (newState) setStateName(newState);
+    if (newPlace) setLocationName(newPlace);
+    if (lat !== undefined) setLatitude(lat.toFixed(4));
+    if (lon !== undefined) setLongitude(lon.toFixed(4));
+    if (newCode) setPincode(newCode);
+
+    if (!farmName && newCity) {
+      setFarmName(`${newCity} Precision Farm`);
+    }
+
+    const soil = getConfirmedSoilType(newState, newCity);
+    setConfirmedSoil(soil);
+    setSoilType(soil.soilType);
+
+    const crops = getRegionalCrops(newState, newCity);
+    setRegionalCrops(crops);
+    if (crops.length > 0) {
+      const alreadyHas = crops.find((c) => c.name === selectedCrop);
+      if (!alreadyHas) {
+        const top = crops[0];
+        setSelectedCrop(top.name);
+        setCropVariety(top.variety);
+        setSeason(top.season);
+        setNitrogen(top.defaultN.toString());
+        setPhosphorus(top.defaultP.toString());
+        setPotassium(top.defaultK.toString());
+        setSoilPh(top.defaultPH.toString());
+        setSoilMoisture(top.defaultMoisture.toString());
+      }
+    }
+  };
+
+  // Sync with AuthContext user location if available on mount
+  useEffect(() => {
+    if (location?.region) {
+      applyLocationUpdate(
+        location.city || "Visakhapatnam",
+        location.region,
+        location.formattedAddress || `${location.city}, ${location.region}`,
+        location.latitude,
+        location.longitude
+      );
+    }
+  }, [location]);
+
+  async function handlePincodeChange(val: string) {
+    const cleaned = val.replace(/\D/g, "").slice(0, 6);
+    setPincode(cleaned);
+    if (cleaned.length >= 2) {
+      setResolvingPin(true);
+      try {
+        const res = await resolvePincode(cleaned);
+        if (res) {
+          applyLocationUpdate(
+            res.city,
+            res.state,
+            `${res.place}, ${res.district}`,
+            res.latitude,
+            res.longitude,
+            cleaned
+          );
+        }
+      } catch (err) {
+        console.warn("Pincode resolution notice:", err);
+      } finally {
+        setResolvingPin(false);
+      }
+    }
+  }
+
   function handleCropChange(cropName: string) {
     setSelectedCrop(cropName);
-    const found = CROPS_LIST.find((c) => c.name === cropName);
+    const found = regionalCrops.find((c) => c.name === cropName);
     if (found) {
       setCropVariety(found.variety);
       setSeason(found.season);
@@ -152,15 +235,16 @@ export default function FarmManagementPage() {
                 const geo = await res.json();
                 const address = geo.address || {};
                 const detectedCity = address.city || address.town || address.village || address.county || "Local Agro Zone";
-                const detectedState = address.state || "State";
-                const detectedCountry = address.country || "India";
-                setCity(detectedCity);
-                setStateName(detectedState);
-                setCountry(detectedCountry);
-                setLocationName(`${detectedCity}, ${detectedState}`);
-                if (!farmName) {
-                  setFarmName(`${detectedCity} Agro Farm`);
-                }
+                const detectedState = address.state || "Andhra Pradesh";
+                const detectedPostcode = (address.postcode || "").replace(/\D/g, "").slice(0, 6);
+                applyLocationUpdate(
+                  detectedCity,
+                  detectedState,
+                  `${detectedCity}, ${detectedState}`,
+                  lat,
+                  lon,
+                  detectedPostcode || pincode
+                );
               }
             } catch {
               setLocationName("Monitored Farm Field");
@@ -168,7 +252,7 @@ export default function FarmManagementPage() {
             setDetectingLocation(false);
           },
           (err) => {
-            console.warn("Location permission denied/unavailable:", err);
+            console.warn("Location permission notice:", err);
             setDetectingLocation(false);
           },
           { timeout: 8000 }
@@ -188,8 +272,8 @@ export default function FarmManagementPage() {
       return;
     }
 
-    const lat = parseFloat(latitude);
-    const lon = parseFloat(longitude);
+    const lat = isNaN(parseFloat(latitude)) ? 16.3067 : parseFloat(latitude);
+    const lon = isNaN(parseFloat(longitude)) ? 80.4365 : parseFloat(longitude);
     const area = parseFloat(totalArea);
     const n = parseFloat(nitrogen);
     const p = parseFloat(phosphorus);
@@ -198,14 +282,6 @@ export default function FarmManagementPage() {
     const moisture = parseFloat(soilMoisture);
     const om = parseFloat(organicMatter);
 
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      setStatusMessage({ type: "error", text: "Invalid latitude (-90 to 90 allowed)." });
-      return;
-    }
-    if (isNaN(lon) || lon < -180 || lon > 180) {
-      setStatusMessage({ type: "error", text: "Invalid longitude (-180 to 180 allowed)." });
-      return;
-    }
     if (isNaN(area) || area <= 0) {
       setStatusMessage({ type: "error", text: "Please enter a valid farm area greater than 0." });
       return;
@@ -241,6 +317,7 @@ export default function FarmManagementPage() {
         city: city.trim(),
         state: stateName.trim(),
         country: country.trim(),
+        pincode: pincode.trim(),
         latitude: lat,
         longitude: lon,
         total_area_hectares: roundNum(totalHa, 2),
@@ -390,7 +467,7 @@ export default function FarmManagementPage() {
         <>
           {!analysisResult ? (
             <form onSubmit={handleAnalyzeFarm} className="space-y-6">
-              {/* SECTION 1: FARM LOCATION & BOUNDARIES */}
+              {/* SECTION 1: FARM LOCATION & POSTAL PIN CODE */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
@@ -398,8 +475,10 @@ export default function FarmManagementPage() {
                       1
                     </div>
                     <div>
-                      <h2 className="font-bold text-slate-900 text-sm">Farm Information & Location</h2>
-                      <p className="text-[11px] text-slate-500">Provide GPS coordinates or use current location to synchronize live weather and satellite NDVI.</p>
+                      <h2 className="font-bold text-slate-900 text-sm">Farm Information & Postal PIN Code</h2>
+                      <p className="text-[11px] text-slate-500">
+                        Enter your 6-digit postal PIN code to automatically detect your locality, confirm soil classification, and load regional crops.
+                      </p>
                     </div>
                   </div>
 
@@ -415,6 +494,31 @@ export default function FarmManagementPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  {/* Postal PIN Code Input - Primary Location Driver */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-slate-700 font-bold flex items-center gap-1.5">
+                        <span>Postal PIN Code *</span>
+                        {resolvingPin && <RefreshCw className="w-3 h-3 text-emerald-600 animate-spin" />}
+                      </label>
+                      <span className="text-[10px] text-emerald-700 font-semibold">Auto-detects location</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        placeholder="e.g. 522001"
+                        value={pincode}
+                        onChange={(e) => handlePincodeChange(e.target.value)}
+                        className="w-full pl-3 pr-20 py-2 rounded-xl border border-emerald-300 bg-emerald-50/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700 font-mono font-bold text-slate-900 text-sm tracking-wide"
+                      />
+                      <span className="absolute right-2.5 top-2 text-[10px] uppercase font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                        India PIN
+                      </span>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">Farm Name *</label>
                     <input
@@ -426,6 +530,7 @@ export default function FarmManagementPage() {
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
                     />
                   </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">District / Region Name</label>
                     <input
@@ -436,13 +541,21 @@ export default function FarmManagementPage() {
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
                     />
                   </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">City / Locality</label>
                     <input
                       type="text"
                       placeholder="e.g. Guntur"
                       value={city}
-                      onChange={(e) => setCity(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCity(val);
+                        const soil = getConfirmedSoilType(stateName, val);
+                        setConfirmedSoil(soil);
+                        setSoilType(soil.soilType);
+                        setRegionalCrops(getRegionalCrops(stateName, val));
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
                     />
                   </div>
@@ -452,10 +565,18 @@ export default function FarmManagementPage() {
                     <input
                       type="text"
                       value={stateName}
-                      onChange={(e) => setStateName(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setStateName(val);
+                        const soil = getConfirmedSoilType(val, city);
+                        setConfirmedSoil(soil);
+                        setSoilType(soil.soilType);
+                        setRegionalCrops(getRegionalCrops(val, city));
+                      }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
                     />
                   </div>
+
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">Country</label>
                     <input
@@ -465,6 +586,7 @@ export default function FarmManagementPage() {
                       className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700"
                     />
                   </div>
+
                   <div className="flex gap-2">
                     <div className="flex-1">
                       <label className="block text-slate-700 font-semibold mb-1">Farm Area *</label>
@@ -491,60 +613,56 @@ export default function FarmManagementPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">GPS Latitude *</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      required
-                      value={latitude}
-                      onChange={(e) => setLatitude(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-slate-700 font-semibold mb-1">GPS Longitude *</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      required
-                      value={longitude}
-                      onChange={(e) => setLongitude(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700 font-mono"
-                    />
-                  </div>
-                  <div className="flex items-end">
-                    <div className="text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex items-center gap-1.5 w-full">
-                      <Info className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Coordinates feed Copernicus Sentinel-2 satellite queries.</span>
+                  {/* Auto-resolved location telemetry banner (replaces manual GPS latitude and longitude fields) */}
+                  <div className="sm:col-span-2 flex items-center">
+                    <div className="text-[11px] text-slate-700 bg-emerald-50/90 p-3 rounded-xl border border-emerald-200 flex items-center justify-between gap-2 w-full">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <div>
+                          <span className="font-bold text-slate-900">Geospatial Telemetry Synced:</span>{" "}
+                          <span className="text-slate-800">{city || "Local Zone"}, {stateName}</span>{" "}
+                          <span className="text-emerald-800 font-mono font-semibold">({latitude}°N, {longitude}°E)</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded shrink-0 hidden md:inline">
+                        Satellite & Weather Auto-Configured
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* SECTION 2: CROP INFORMATION */}
+              {/* SECTION 2: CROP INFORMATION & REGIONAL CROP ROSTER */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
-                    2
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                      2
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-slate-900 text-sm">Crop Cultivation & Regional Crop Catalog</h2>
+                      <p className="text-[11px] text-slate-500">
+                        Select from verified crops cultivated in {stateName || "your region"} based on agro-climatic zone suitability.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-slate-900 text-sm">Crop Cultivation & Seasonal Cycle</h2>
-                    <p className="text-[11px] text-slate-500">Select your active crop variety, cultivation season, and growth stage.</p>
-                  </div>
+
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg shrink-0">
+                    {regionalCrops.length} Crops Adapted for {stateName || "Zone"}
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Primary Crop *</label>
+                    <label className="block text-slate-700 font-semibold mb-1">Primary Crop (Regional Roster) *</label>
                     <select
                       value={selectedCrop}
                       onChange={(e) => handleCropChange(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700 font-semibold text-slate-800"
+                      className="w-full px-3 py-2 rounded-xl border border-emerald-300 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-700 font-semibold text-slate-900"
                     >
-                      {CROPS_LIST.map((c) => (
+                      {regionalCrops.map((c) => (
                         <option key={c.name} value={c.name}>
-                          {c.name} ({c.season})
+                          {c.name} ({c.season}) • [{c.category}]
                         </option>
                       ))}
                     </select>
@@ -604,15 +722,55 @@ export default function FarmManagementPage() {
                 </div>
               </div>
 
-              {/* SECTION 3: SOIL CONDITIONS & NUTRIENT PROFILE */}
+              {/* SECTION 3: SOIL CONDITIONS & CONFIRMED SOIL CLASSIFICATION */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
-                    3
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                      3
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-slate-900 text-sm">Soil Chemistry & Confirmed Soil Classification</h2>
+                      <p className="text-[11px] text-slate-500">
+                        Regional soil classification automatically confirmed for {city || stateName} based on ICAR agro-ecological survey.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="font-bold text-slate-900 text-sm">Soil Chemistry & Moisture Telemetry</h2>
-                    <p className="text-[11px] text-slate-500">Enter measured soil nutrients. Each variable feeds the Hilbert space feature map for Quantum SVR.</p>
+
+                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg shrink-0 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{confirmedSoil.confidence}</span>
+                  </span>
+                </div>
+
+                {/* Confirmed Soil Type Card */}
+                <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-700">Confirmed Soil Type:</span>
+                      <span className="text-sm font-extrabold text-emerald-950 bg-emerald-100/90 px-2.5 py-0.5 rounded-md border border-emerald-300">
+                        {confirmedSoil.soilType}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-500 bg-white/80 px-2 py-0.5 rounded border border-emerald-100">
+                      {confirmedSoil.zoneName}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-600 leading-relaxed">
+                    {confirmedSoil.characteristics}
+                  </p>
+
+                  <div className="flex flex-wrap gap-4 text-[10px] text-slate-500 font-medium pt-2 border-t border-emerald-200/60">
+                    <div>
+                      Typical pH Range: <strong className="text-slate-800 font-bold">{confirmedSoil.phRange}</strong>
+                    </div>
+                    <div>
+                      Typical Organic Carbon: <strong className="text-slate-800 font-bold">{confirmedSoil.organicMatterTypical}</strong>
+                    </div>
+                    <div className="text-emerald-800 font-medium">
+                      ✓ Auto-selected in classification dropdown below
+                    </div>
                   </div>
                 </div>
 
@@ -753,7 +911,7 @@ export default function FarmManagementPage() {
                   disabled={loading}
                   className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm transition cursor-pointer shadow-lg shadow-emerald-950/40 shrink-0"
                 >
-                  <Sparkles className="w-4 h-4 text-emerald-200" />
+                  <Atom className="w-4 h-4 text-emerald-200" />
                   <span>{loading ? "Executing Pipeline..." : "Analyze My Farm"}</span>
                 </button>
               </div>

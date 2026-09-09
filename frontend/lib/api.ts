@@ -325,6 +325,21 @@ export interface QuantumModelTechnicalDetails {
   disclosed_limitations: string;
 }
 
+export interface ResidualDistributionBin {
+  bin_range: string;
+  bin_center: number;
+  count: number;
+}
+
+export interface RobustnessAnalysisItem {
+  perturbation: string;
+  quantum_svr_delta_pct: number;
+  random_forest_delta_pct: number;
+  rbf_svr_delta_pct: number;
+  ridge_delta_pct: number;
+  most_stable_model: string;
+}
+
 export interface BenchmarkResponse {
   benchmark_id: string;
   timestamp: string;
@@ -335,6 +350,8 @@ export interface BenchmarkResponse {
   quantum_details: QuantumModelTechnicalDetails;
   actual_vs_predicted: Record<string, BenchmarkScatterPoint[]>;
   residuals: Record<string, BenchmarkResidualPoint[]>;
+  residual_distributions?: Record<string, ResidualDistributionBin[]>;
+  robustness_analysis?: RobustnessAnalysisItem[];
 }
 
 // Backward compatibility alias
@@ -758,6 +775,7 @@ export const api = {
     city?: string;
     state?: string;
     country?: string;
+    pincode?: string;
     latitude: number;
     longitude: number;
     total_area_hectares: number;
@@ -838,5 +856,90 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/harvest-results/${farmId}`);
     return handleResponse<any[]>(res);
   },
+
+  async runOptimizationScenario(payload: OptimizationScenarioRequest): Promise<OptimizationScenarioResponse> {
+    const res = await fetch(`${API_BASE_URL}/optimization/scenario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<OptimizationScenarioResponse>(res);
+  },
+
+  async getFarmWeatherImpact(farmId: number): Promise<FarmWeatherImpactResponse> {
+    const res = await fetch(`${API_BASE_URL}/farms/${farmId}/weather-impact`);
+    return handleResponse<FarmWeatherImpactResponse>(res);
+  },
 };
+
+// ---------------------------------------------------------------------------
+// Optimization & Weather Impact Data Models
+// ---------------------------------------------------------------------------
+export interface OptimizationScenarioRequest {
+  objective_type?: "maximum_yield" | "minimum_cost" | "minimum_water" | "balanced_plan";
+  current_nitrogen: number;
+  current_phosphorus: number;
+  current_potassium: number;
+  soil_moisture: number;
+  rainfall: number;
+  ndvi: number;
+  budget_limit_usd_ha?: number;
+  target_yield_q_acre?: number;
+}
+
+export interface OptimizationSolutionItem {
+  method: string;
+  nitrogen_kg_ha: number;
+  phosphorus_kg_ha: number;
+  potassium_kg_ha: number;
+  irrigation_mm: number;
+  predicted_yield_q_acre: number;
+  predicted_yield_t_ha: number;
+  input_cost_usd_ha: number;
+  objective_score: number;
+  runtime_ms: number;
+  iterations?: number;
+  tunneling_steps?: number;
+  status: string;
+}
+
+export interface OptimizationScenarioResponse {
+  objective: string;
+  classical_solution: OptimizationSolutionItem;
+  quantum_inspired_solution: OptimizationSolutionItem;
+  objective_delta: number;
+  runtime_ratio: number;
+  superior_method: string;
+  scientific_assessment: string;
+  constraints: Record<string, any>;
+  timestamp: string;
+}
+
+export interface WeatherImpactScenarioItem {
+  scenario_id: string;
+  name: string;
+  description: string;
+  temperature_shift_c: number;
+  rainfall_shift_pct: number;
+  classical_yield_q_acre: number;
+  quantum_yield_q_acre: number;
+  yield_delta_q_acre: number;
+  risk_level: string;
+  scientific_rationale: string;
+}
+
+export interface FarmWeatherImpactResponse {
+  farm_id: number;
+  farm_name: string;
+  observed_weather: {
+    temperature_c: number;
+    precipitation_mm: number;
+    conditions: string;
+  };
+  baseline_classical_yield: number;
+  baseline_quantum_yield: number;
+  stress_simulations: WeatherImpactScenarioItem[];
+  model_type_disclaimer: string;
+  timestamp: string;
+}
 

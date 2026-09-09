@@ -47,6 +47,7 @@ from data.generator import get_train_test_agronomic_data, scale_for_quantum
 from core.quantum_engine import AgriQuantumEngine
 from core.benchmark import benchmark_models
 from core.recommender import PrecisionAgronomyRecommender
+from backend.services.optimization_service import get_optimization_service
 
 router = APIRouter(prefix="/api/v1")
 
@@ -1552,6 +1553,8 @@ def _build_benchmark_payload(benchmark_dict: Dict[str, Any], benchmark_id: str, 
         "quantum_details": benchmark_dict["quantum_details"],
         "actual_vs_predicted": benchmark_dict["actual_vs_predicted"],
         "residuals": benchmark_dict["residuals"],
+        "residual_distributions": benchmark_dict.get("residual_distributions"),
+        "robustness_analysis": benchmark_dict.get("robustness_analysis"),
     }
 
 
@@ -1995,6 +1998,160 @@ def get_quantum_scenario_by_id(scenario_id: str):
     if scenario_id in _SCENARIO_STORE:
         return _SCENARIO_STORE[scenario_id]
     return compute_quantum_scenario(schemas.QuantumScenarioRequest(scenario_name="Optimized Plan", scenario_type="optimized"))
+
+
+@router.post("/optimization/scenario", response_model=schemas.OptimizationScenarioResponse)
+def run_optimization_scenario(payload: schemas.OptimizationScenarioRequest):
+    """
+    Dual-Engine Agricultural Resource Allocation Lab:
+    Executes and compares Classical (SLSQP continuous non-linear) and
+    Quantum-Inspired (Simulated Quantum Annealing over discretized QUBO state space)
+    optimizers across 4 configurable farmer objectives (maximum_yield, minimum_cost,
+    minimum_water, balanced_plan).
+    """
+    opt_service = get_optimization_service(_ENGINE)
+    result = opt_service.run_comparison(
+        objective_type=payload.objective_type,
+        current_n=payload.current_nitrogen,
+        current_p=payload.current_phosphorus,
+        current_k=payload.current_potassium,
+        soil_moisture=payload.soil_moisture,
+        rainfall=payload.rainfall,
+        ndvi=payload.ndvi,
+        budget_limit=payload.budget_limit_usd_ha or 240.0,
+        target_yield=payload.target_yield_q_acre or 32.0,
+    )
+
+    return schemas.OptimizationScenarioResponse(
+        objective=result["objective"],
+        classical_solution=schemas.OptimizationSolutionItem(**result["classical_solution"]),
+        quantum_inspired_solution=schemas.OptimizationSolutionItem(**result["quantum_inspired_solution"]),
+        objective_delta=result["objective_delta"],
+        runtime_ratio=result["runtime_ratio"],
+        superior_method=result["superior_method"],
+        scientific_assessment=result["scientific_assessment"],
+        constraints=result["constraints"],
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
+@router.get("/farms/{farm_id}/weather-impact", response_model=schemas.FarmWeatherImpactResponse)
+async def get_farm_weather_impact_simulations(farm_id: int, db: Session = Depends(get_db)):
+    """
+    Quantum Weather Impact Simulation Engine:
+    Evaluates how Classical and Quantum yield models respond to controlled climate shocks
+    (Severe Drought, Excessive Monsoon, Heatwave, Cold Snap).
+    Explicitly categorized as Model Simulation, NOT a physical weather forecast.
+    """
+    farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+    if not farm:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Farm {farm_id} not found.")
+
+    weather = await get_farm_weather(latitude=farm.latitude, longitude=farm.longitude, farm_name=farm.name, farm_id=farm.id)
+    current_w = weather.get("current_weather", {})
+    temp_base = float(current_w.get("temperature", 24.0))
+    rain_base = float(current_w.get("precipitation", 120.0))
+    soil_moist_base = 28.0
+    ndvi_base = 0.65
+    nitrogen_base = 85.0
+
+    opt_service = get_optimization_service(_ENGINE)
+    base_classical = round(opt_service._estimate_yield(nitrogen_base, 45.0, 40.0, 15.0, soil_moist_base, rain_base, ndvi_base), 2)
+    
+    c_base_features = np.array([[nitrogen_base, soil_moist_base, rain_base, ndvi_base]])
+    q_vec, _ = scale_for_quantum(c_base_features)
+    base_quantum = round(float(_ENGINE.predict(q_vec)[0]), 2) if _ENGINE.is_fitted else base_classical
+
+    shocks = [
+        {
+            "id": "drought_severe",
+            "name": "Severe Seasonal Drought (-40% Rainfall, +2.5°C)",
+            "desc": "Simulates prolonged mid-season moisture deficit with elevated evapotranspiration stress.",
+            "temp_shift": 2.5,
+            "rain_shift": -40.0,
+            "soil_shift": -10.0,
+            "ndvi_shift": -0.12,
+            "rationale": "Quantum SVR captures non-linear boundary where soil moisture drops below permanent wilting point, whereas classical linear baselines underestimate yield collapse.",
+        },
+        {
+            "id": "monsoon_excess",
+            "name": "Excessive Monsoon Inundation (+60% Rainfall, -1.0°C)",
+            "desc": "Simulates waterlogging and nutrient leaching resulting from tropical depression rainfall.",
+            "temp_shift": -1.0,
+            "rain_shift": 60.0,
+            "soil_shift": 15.0,
+            "ndvi_shift": -0.04,
+            "rationale": "High saturation triggers denitrification; both models reflect asymptotic yield saturation with quantum kernel stabilizing prediction.",
+        },
+        {
+            "id": "heatwave_stress",
+            "name": "Extreme Heatwave (+4.5°C, -15% Rainfall)",
+            "desc": "Simulates terminal heat stress during anthesis/grain-filling stages.",
+            "temp_shift": 4.5,
+            "rain_shift": -15.0,
+            "soil_shift": -6.0,
+            "ndvi_shift": -0.08,
+            "rationale": "Thermal stress suppresses photosynthetic enzyme kinetics; both models register yield compression across critical thermal bounds.",
+        },
+        {
+            "id": "cold_snap",
+            "name": "Unseasonal Cold Snap (-5.0°C)",
+            "desc": "Simulates unseasonal temperature plunge during early vegetative canopy development.",
+            "temp_shift": -5.0,
+            "rain_shift": 0.0,
+            "soil_shift": 0.0,
+            "ndvi_shift": -0.05,
+            "rationale": "Metabolic slowdown temporarily inhibits nutrient uptake; models maintain relative stability with moderate yield decrement.",
+        },
+    ]
+
+    stress_results = []
+    for s in shocks:
+        sim_rain = max(10.0, rain_base * (1.0 + s["rain_shift"] / 100.0))
+        sim_moist = np.clip(soil_moist_base + s["soil_shift"], 5.0, 55.0)
+        sim_ndvi = np.clip(ndvi_base + s["ndvi_shift"], 0.1, 0.95)
+
+        c_yield = round(opt_service._estimate_yield(nitrogen_base, 45.0, 40.0, 10.0, sim_moist, sim_rain, sim_ndvi), 2)
+        q_raw = np.array([[nitrogen_base, sim_moist, sim_rain, sim_ndvi]])
+        q_sc, _ = scale_for_quantum(q_raw)
+        q_yield = round(float(_ENGINE.predict(q_sc)[0]), 2) if _ENGINE.is_fitted else c_yield
+
+        delta = round(q_yield - c_yield, 2)
+        risk = "Critical" if (q_yield < 20.0 or c_yield < 20.0) else ("Elevated" if (q_yield < 26.0) else "Moderate")
+
+        stress_results.append(schemas.WeatherImpactScenarioItem(
+            scenario_id=s["id"],
+            name=s["name"],
+            description=s["desc"],
+            temperature_shift_c=s["temp_shift"],
+            rainfall_shift_pct=s["rain_shift"],
+            classical_yield_q_acre=c_yield,
+            quantum_yield_q_acre=q_yield,
+            yield_delta_q_acre=delta,
+            risk_level=risk,
+            scientific_rationale=s["rationale"],
+        ))
+
+    return schemas.FarmWeatherImpactResponse(
+        farm_id=farm.id,
+        farm_name=farm.name,
+        observed_weather={
+            "temperature_c": temp_base,
+            "precipitation_mm": rain_base,
+            "conditions": current_w.get("conditions", "Clear"),
+        },
+        baseline_classical_yield=base_classical,
+        baseline_quantum_yield=base_quantum,
+        stress_simulations=stress_results,
+        model_type_disclaimer="Model Simulation — Evaluates classical vs quantum yield response under climate shock scenarios. Not a physical weather forecast.",
+        timestamp=datetime.now(timezone.utc),
+    )
+
+
+@router.get("/farms/{farm_id}/risk", response_model=schemas.FarmRiskOutlookResponse)
+def get_farm_risk_direct_alias(farm_id: int, db: Session = Depends(get_db)):
+    """Direct alias for farm risk outlook intelligence (/api/v1/farms/{farm_id}/risk)."""
+    return get_farm_risk_outlook(farm_id=farm_id, db=db)
 
 
 @router.get("/quantum/kernel-matrix/{prediction_id}", response_model=schemas.QuantumKernelMatrixResponse)

@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Atom,
   CheckCircle2,
-  Sparkles,
   BarChart3,
   Layers,
   ChevronDown,
