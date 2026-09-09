@@ -1,0 +1,281 @@
+{
+  "metadata": {
+    "title": "AgriQuantum Classical vs Quantum Scientific Benchmark Suite",
+    "version": "v2.4-calibrated",
+    "timestamp": "2026-09-09T05:05:56Z",
+    "environment": {
+      "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+      "cores": 16,
+      "memory_gb": 15.7,
+      "python_version": "3.13.14",
+      "qiskit_version": "2.5.2",
+      "qiskit_aer_version": "0.17.2",
+      "os": "Windows 11"
+    },
+    "execution_duration_sec": 2.67
+  },
+  "experiment_a_baseline": {
+    "models": [
+      {
+        "model_id": "qsvr",
+        "model": "Quantum SVR (QSVR)",
+        "type": "Quantum ML",
+        "framework": "Qiskit 2.5.2 + Aer",
+        "r2": 0.5296,
+        "rmse": 3.6266,
+        "mae": 2.873,
+        "mape": 7.38,
+        "train_time_sec": 0.084,
+        "inf_time_sec": 0.1033,
+        "rank": 4
+      },
+      {
+        "model_id": "random_forest",
+        "model": "Random Forest",
+        "type": "Classical ML",
+        "framework": "Scikit-Learn (Ensemble)",
+        "r2": 0.5713,
+        "rmse": 3.4622,
+        "mae": 2.9626,
+        "mape": 7.5,
+        "train_time_sec": 0.0618,
+        "inf_time_sec": 0.0036,
+        "rank": 3
+      },
+      {
+        "model_id": "rbf_svr",
+        "model": "Classical SVR (RBF)",
+        "type": "Classical ML",
+        "framework": "Scikit-Learn (SVM)",
+        "r2": 0.5877,
+        "rmse": 3.3953,
+        "mae": 2.5672,
+        "mape": 6.7,
+        "train_time_sec": 0.0009,
+        "inf_time_sec": 0.0003,
+        "rank": 2
+      },
+      {
+        "model_id": "ridge",
+        "model": "Ridge Regressor",
+        "type": "Classical ML",
+        "framework": "Scikit-Learn (Linear)",
+        "r2": 0.5995,
+        "rmse": 3.3462,
+        "mae": 2.7512,
+        "mape": 7.03,
+        "train_time_sec": 0.0008,
+        "inf_time_sec": 0.0001,
+        "rank": 1
+      }
+    ],
+    "headline_comparison": {
+      "quantum_model": {
+        "name": "Quantum SVR (QSVR)",
+        "r2": 0.5296,
+        "rmse": 3.6266,
+        "mae": 2.873,
+        "mape": 7.38,
+        "train_time_sec": 0.084,
+        "inf_time_sec": 0.1033
+      },
+      "best_classical_model": {
+        "name": "Ridge Regressor",
+        "r2": 0.5995,
+        "rmse": 3.3462,
+        "mae": 2.7512,
+        "mape": 7.03,
+        "train_time_sec": 0.0008,
+        "inf_time_sec": 0.0001
+      },
+      "r2_delta": -0.0699,
+      "rmse_delta": 0.2804,
+      "mae_delta": 0.1218,
+      "winner": "Ridge Regressor",
+      "summary_statement": "Ridge Regressor achieved the strongest predictive performance on this evaluation dataset with an R\u00b2 of 0.5995 and RMSE of 3.346 Q/acre, compared to Quantum SVR (R\u00b2 = 0.5296, RMSE = 3.627 Q/acre)."
+    },
+    "dataset_info": {
+      "name": "AgriQuantum Precision Agronomy Benchmark Suite",
+      "version": "v2.4-calibrated",
+      "sample_count": 140,
+      "train_count": 105,
+      "test_count": 35,
+      "features": [
+        "soil_nitrogen",
+        "soil_moisture",
+        "rainfall",
+        "ndvi"
+      ],
+      "target": "yield_quintals (Quintals/Acre)",
+      "train_split": 0.75,
+      "test_split": 0.25,
+      "validation_method": "Hold-out test split with strict train-only StandardScaler fitting to guarantee zero data leakage",
+      "random_seed": 42
+    },
+    "evaluation_protocol": "Identical holdout test split (75% train, 25% test, 0 data leakage)"
+  },
+  "experiment_b_feature_interactions": [
+    {
+      "interaction": "N x Moisture (Water-Nitrogen Co-limitation)",
+      "correlation_with_yield": 0.7403,
+      "significance": "High",
+      "quantum_relevance": "Directly encoded into 2-qubit ZZ entangling phase gates"
+    },
+    {
+      "interaction": "N x P (Liebig Stoichiometry)",
+      "correlation_with_yield": 0.5164,
+      "significance": "High",
+      "quantum_relevance": "Directly encoded into 2-qubit ZZ entangling phase gates"
+    },
+    {
+      "interaction": "N x K (Osmotic Buffer)",
+      "correlation_with_yield": 0.5444,
+      "significance": "High",
+      "quantum_relevance": "Directly encoded into 2-qubit ZZ entangling phase gates"
+    },
+    {
+      "interaction": "Rainfall x Temperature (Evaporative Index)",
+      "correlation_with_yield": -0.0359,
+      "significance": "Low",
+      "quantum_relevance": "Directly encoded into 2-qubit ZZ entangling phase gates"
+    },
+    {
+      "interaction": "NDVI x Moisture (Canopy Transpiration)",
+      "correlation_with_yield": 0.5087,
+      "significance": "High",
+      "quantum_relevance": "Directly encoded into 2-qubit ZZ entangling phase gates"
+    }
+  ],
+  "experiment_c_perturbations": [
+    {
+      "perturbation": "Soil Moisture +10%",
+      "quantum_svr_delta_pct": 0.49,
+      "random_forest_delta_pct": 0.58,
+      "rbf_svr_delta_pct": 0.76,
+      "ridge_delta_pct": 0.88,
+      "most_stable_model": "Quantum SVR (QSVR)"
+    },
+    {
+      "perturbation": "Soil Moisture -10%",
+      "quantum_svr_delta_pct": 0.8,
+      "random_forest_delta_pct": 0.66,
+      "rbf_svr_delta_pct": 1.17,
+      "ridge_delta_pct": 0.88,
+      "most_stable_model": "Random Forest"
+    },
+    {
+      "perturbation": "Seasonal Rainfall +10%",
+      "quantum_svr_delta_pct": 0.7,
+      "random_forest_delta_pct": 0.36,
+      "rbf_svr_delta_pct": 0.86,
+      "ridge_delta_pct": 0.33,
+      "most_stable_model": "Classical SVR (RBF)"
+    },
+    {
+      "perturbation": "Seasonal Rainfall -10%",
+      "quantum_svr_delta_pct": 0.68,
+      "random_forest_delta_pct": 0.73,
+      "rbf_svr_delta_pct": 0.74,
+      "ridge_delta_pct": 0.33,
+      "most_stable_model": "Classical SVR (RBF)"
+    },
+    {
+      "perturbation": "Soil Nitrogen +10%",
+      "quantum_svr_delta_pct": 0.83,
+      "random_forest_delta_pct": 2.46,
+      "rbf_svr_delta_pct": 1.24,
+      "ridge_delta_pct": 1.57,
+      "most_stable_model": "Quantum SVR (QSVR)"
+    },
+    {
+      "perturbation": "Canopy NDVI -0.05",
+      "quantum_svr_delta_pct": 0.4,
+      "random_forest_delta_pct": 1.01,
+      "rbf_svr_delta_pct": 1.51,
+      "ridge_delta_pct": 1.09,
+      "most_stable_model": "Quantum SVR (QSVR)"
+    }
+  ],
+  "experiment_d_sample_scaling": [
+    {
+      "total_samples": 35,
+      "train_samples": 26,
+      "test_samples": 9,
+      "quantum_svr_r2": 0.0142,
+      "random_forest_r2": 0.4157,
+      "rbf_svr_r2": -0.3836,
+      "sample_efficiency_leader": "Random Forest"
+    },
+    {
+      "total_samples": 70,
+      "train_samples": 52,
+      "test_samples": 18,
+      "quantum_svr_r2": 0.4266,
+      "random_forest_r2": 0.6218,
+      "rbf_svr_r2": 0.493,
+      "sample_efficiency_leader": "Random Forest"
+    },
+    {
+      "total_samples": 105,
+      "train_samples": 78,
+      "test_samples": 27,
+      "quantum_svr_r2": 0.6155,
+      "random_forest_r2": 0.7459,
+      "rbf_svr_r2": 0.7219,
+      "sample_efficiency_leader": "Random Forest"
+    },
+    {
+      "total_samples": 140,
+      "train_samples": 105,
+      "test_samples": 35,
+      "quantum_svr_r2": 0.5296,
+      "random_forest_r2": 0.566,
+      "rbf_svr_r2": 0.5877,
+      "sample_efficiency_leader": "Classical SVR (RBF)"
+    }
+  ],
+  "experiment_e_noise_robustness": [
+    {
+      "noise_sigma": 0.02,
+      "noise_pct": "2%",
+      "quantum_svr_r2": 0.5307,
+      "random_forest_r2": 0.5952,
+      "rbf_svr_r2": 0.5868,
+      "most_resilient": "Random Forest"
+    },
+    {
+      "noise_sigma": 0.05,
+      "noise_pct": "5%",
+      "quantum_svr_r2": 0.5367,
+      "random_forest_r2": 0.6089,
+      "rbf_svr_r2": 0.589,
+      "most_resilient": "Random Forest"
+    },
+    {
+      "noise_sigma": 0.1,
+      "noise_pct": "10%",
+      "quantum_svr_r2": 0.5527,
+      "random_forest_r2": 0.6294,
+      "rbf_svr_r2": 0.6015,
+      "most_resilient": "Random Forest"
+    },
+    {
+      "noise_sigma": 0.15,
+      "noise_pct": "15%",
+      "quantum_svr_r2": 0.5718,
+      "random_forest_r2": 0.6484,
+      "rbf_svr_r2": 0.6091,
+      "most_resilient": "Random Forest"
+    }
+  ],
+  "experiment_f_reproducibility": {
+    "trials": [
+      0.5296,
+      0.5296,
+      0.5296
+    ],
+    "variance": 0.0,
+    "is_reproducible": true,
+    "conclusion": "Perfect deterministic reproducibility verified across independent executions."
+  }
+}
