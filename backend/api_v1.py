@@ -596,9 +596,9 @@ def setup_and_analyze_farm(
     return schemas.FarmSetupResponse(
         status="success",
         message=f"Farm '{farm.name}' analyzed and initialized successfully.",
-        farm=schemas.FarmResponse.from_orm(farm),
-        field=schemas.FieldResponse.from_orm(field),
-        crop=schemas.CropResponse.from_orm(crop),
+        farm=schemas.FarmResponse.model_validate(farm),
+        field=schemas.FieldResponse.model_validate(field),
+        crop=schemas.CropResponse.model_validate(crop),
         soil_telemetry={
             "nitrogen_kg_ha": payload.soil_nitrogen,
             "phosphorus_kg_ha": payload.soil_phosphorus,
@@ -1308,6 +1308,99 @@ def get_farm_consolidated_weather_endpoint(
         raise HTTPException(status_code=502, detail="Weather provider error: unable to retrieve farm weather.")
 
 
+# ==============================================================================
+# OFFICIAL IMD WEATHER WARNINGS & DOPPLER RADAR NOWCAST ENDPOINTS
+# ==============================================================================
+@router.get("/weather/warnings", response_model=schemas.ImdWeatherWarningsResponse)
+def get_weather_warnings_endpoint(
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Retrieves official IMD severe weather warnings and agrometeorological advisories."""
+    state_centroids = {
+        "punjab": (30.9010, 75.8573),
+        "telangana": (17.3850, 78.4867),
+        "andhra pradesh": (16.5062, 80.6480),
+        "maharashtra": (19.7515, 75.7139),
+        "uttar pradesh": (26.8467, 80.9462),
+        "karnataka": (12.9716, 77.5946),
+        "gujarat": (23.0225, 72.5714),
+        "tamil nadu": (13.0827, 80.2707),
+        "rajasthan": (26.9124, 75.7873),
+        "madhya pradesh": (23.2599, 77.4126),
+        "haryana": (29.0588, 76.0856),
+        "bihar": (25.5941, 85.1376),
+        "west bengal": (22.5726, 88.3639),
+        "odisha": (20.2961, 85.8245),
+    }
+
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if not farm:
+            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
+        latitude, longitude = farm.latitude, farm.longitude
+    elif latitude is None or longitude is None:
+        if state:
+            latitude, longitude = state_centroids.get(state.lower().strip(), (20.5937, 78.9629))
+        else:
+            raise HTTPException(status_code=400, detail="Must provide farm_id, coordinates, or state.")
+
+    if not is_coordinates_inside_india(latitude, longitude):
+        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
+
+    warnings = _IMD_WEATHER_SERVICE.get_weather_warnings(latitude, longitude)
+    return schemas.ImdWeatherWarningsResponse(**warnings)
+
+
+@router.get("/weather/nowcast", response_model=schemas.ImdNowcastResponse)
+def get_weather_nowcast_endpoint(
+    farm_id: Optional[int] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    """Retrieves Doppler Weather Radar short-term nowcast (next 2-3 hours) from IMD."""
+    state_centroids = {
+        "punjab": (30.9010, 75.8573),
+        "telangana": (17.3850, 78.4867),
+        "andhra pradesh": (16.5062, 80.6480),
+        "maharashtra": (19.7515, 75.7139),
+        "uttar pradesh": (26.8467, 80.9462),
+        "karnataka": (12.9716, 77.5946),
+        "gujarat": (23.0225, 72.5714),
+        "tamil nadu": (13.0827, 80.2707),
+        "rajasthan": (26.9124, 75.7873),
+        "madhya pradesh": (23.2599, 77.4126),
+        "haryana": (29.0588, 76.0856),
+        "bihar": (25.5941, 85.1376),
+        "west bengal": (22.5726, 88.3639),
+        "odisha": (20.2961, 85.8245),
+    }
+
+    if farm_id is not None:
+        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
+        if not farm:
+            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
+        latitude, longitude = farm.latitude, farm.longitude
+    elif latitude is None or longitude is None:
+        if state:
+            latitude, longitude = state_centroids.get(state.lower().strip(), (20.5937, 78.9629))
+        else:
+            raise HTTPException(status_code=400, detail="Must provide farm_id, coordinates, or state.")
+
+    if not is_coordinates_inside_india(latitude, longitude):
+        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
+
+    nowcast = _IMD_WEATHER_SERVICE.get_nowcast(latitude, longitude)
+    return schemas.ImdNowcastResponse(**nowcast)
+
+
 @router.get("/weather/{farm_id}", response_model=schemas.WeatherResponse)
 async def get_live_weather(farm_id: int, db: Session = Depends(get_db)):
     """Retrieves live meteorological conditions from Visual Crossing for the farm's coordinates."""
@@ -1427,55 +1520,6 @@ def resolve_pincode_endpoint(pincode: str):
 
 
 # ==============================================================================
-# OFFICIAL IMD WEATHER WARNINGS & DOPPLER RADAR NOWCAST ENDPOINTS
-# ==============================================================================
-@router.get("/weather/warnings", response_model=schemas.ImdWeatherWarningsResponse)
-def get_weather_warnings_endpoint(
-    farm_id: Optional[int] = None,
-    latitude: Optional[float] = None,
-    longitude: Optional[float] = None,
-    db: Session = Depends(get_db),
-):
-    """Retrieves official IMD severe weather warnings and agrometeorological advisories."""
-    if farm_id is not None:
-        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-        if not farm:
-            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
-        latitude, longitude = farm.latitude, farm.longitude
-    elif latitude is None or longitude is None:
-        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
-
-    if not is_coordinates_inside_india(latitude, longitude):
-        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
-
-    warnings = _IMD_WEATHER_SERVICE.get_weather_warnings(latitude, longitude)
-    return schemas.ImdWeatherWarningsResponse(**warnings)
-
-
-@router.get("/weather/nowcast", response_model=schemas.ImdNowcastResponse)
-def get_weather_nowcast_endpoint(
-    farm_id: Optional[int] = None,
-    latitude: Optional[float] = None,
-    longitude: Optional[float] = None,
-    db: Session = Depends(get_db),
-):
-    """Retrieves Doppler Weather Radar short-term nowcast (next 2-3 hours) from IMD."""
-    if farm_id is not None:
-        farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
-        if not farm:
-            raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
-        latitude, longitude = farm.latitude, farm.longitude
-    elif latitude is None or longitude is None:
-        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
-
-    if not is_coordinates_inside_india(latitude, longitude):
-        raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
-
-    nowcast = _IMD_WEATHER_SERVICE.get_nowcast(latitude, longitude)
-    return schemas.ImdNowcastResponse(**nowcast)
-
-
-# ==============================================================================
 # ISRO MOSDAC SATELLITE & REMOTE SENSING ENDPOINTS
 # ==============================================================================
 @router.get("/satellite/mosdac")
@@ -1483,18 +1527,40 @@ def get_mosdac_satellite_endpoint(
     farm_id: Optional[int] = None,
     latitude: Optional[float] = None,
     longitude: Optional[float] = None,
+    state: Optional[str] = None,
+    district: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     """
     Retrieves ISRO MOSDAC near-real-time satellite observation (INSAT-3DR LST, Hydro-Estimator).
     """
+    state_centroids = {
+        "punjab": (30.9010, 75.8573),
+        "telangana": (17.3850, 78.4867),
+        "andhra pradesh": (16.5062, 80.6480),
+        "maharashtra": (19.7515, 75.7139),
+        "uttar pradesh": (26.8467, 80.9462),
+        "karnataka": (12.9716, 77.5946),
+        "gujarat": (23.0225, 72.5714),
+        "tamil nadu": (13.0827, 80.2707),
+        "rajasthan": (26.9124, 75.7873),
+        "madhya pradesh": (23.2599, 77.4126),
+        "haryana": (29.0588, 76.0856),
+        "bihar": (25.5941, 85.1376),
+        "west bengal": (22.5726, 88.3639),
+        "odisha": (20.2961, 85.8245),
+    }
+
     if farm_id is not None:
         farm = db.query(models.Farm).filter(models.Farm.id == farm_id).first()
         if not farm:
             raise HTTPException(status_code=404, detail=f"Farm with ID {farm_id} not found")
         latitude, longitude = farm.latitude, farm.longitude
     elif latitude is None or longitude is None:
-        raise HTTPException(status_code=400, detail="Must provide either farm_id or latitude and longitude.")
+        if state:
+            latitude, longitude = state_centroids.get(state.lower().strip(), (20.5937, 78.9629))
+        else:
+            raise HTTPException(status_code=400, detail="Must provide farm_id, coordinates, or state.")
 
     if not is_coordinates_inside_india(latitude, longitude):
         raise HTTPException(status_code=400, detail="This version of AgriQuantum currently supports agricultural analysis within India.")
@@ -3091,19 +3157,27 @@ def submit_harvest_actuals(farm_id: int, req: schemas.HarvestRecordCreate, db: S
     Submits actual harvest yield at season close, completing the feedback loop
     and updating farm-specific accuracy tracking.
     """
-    err = abs(req.predicted_yield - req.actual_yield) / req.actual_yield * 100.0 if req.actual_yield > 0 else 0.0
+    actual_y = float(req.actual_yield if req.actual_yield is not None else (req.actual_yield_t_ha if req.actual_yield_t_ha is not None else 0.0))
+    pred_y = float(req.predicted_yield if req.predicted_yield is not None else (req.predicted_yield_t_ha if req.predicted_yield_t_ha is not None else 40.0))
+    crop = str(req.crop_name or req.crop or req.crop_type or "Crop")
+    season_yr = str(req.season_year or f"{req.season or 'Kharif'} {req.year or 2026}")
+    actual_n = req.actual_nitrogen if req.actual_nitrogen is not None else req.actual_nitrogen_kg_ha
+    actual_w = req.actual_water_mm if req.actual_water_mm is not None else req.actual_irrigation_mm
+    notes = req.notes or (f"Condition: {req.observed_condition}" if req.observed_condition else None)
+
+    err = abs(pred_y - actual_y) / actual_y * 100.0 if actual_y > 0 else 0.0
 
     record = models.HarvestRecord(
         farm_id=farm_id,
         field_id=req.field_id,
-        season_year=req.season_year,
-        crop_name=req.crop_name,
-        predicted_yield=req.predicted_yield,
-        actual_yield=req.actual_yield,
+        season_year=season_yr,
+        crop_name=crop,
+        predicted_yield=pred_y,
+        actual_yield=actual_y,
         error_pct=err,
-        actual_nitrogen=req.actual_nitrogen,
-        actual_water_mm=req.actual_water_mm,
-        notes=req.notes,
+        actual_nitrogen=actual_n,
+        actual_water_mm=actual_w,
+        notes=notes,
     )
     db.add(record)
 
@@ -3111,8 +3185,8 @@ def submit_harvest_actuals(farm_id: int, req: schemas.HarvestRecordCreate, db: S
     tl = models.FarmTimelineEvent(
         farm_id=farm_id,
         event_type="MANAGEMENT_ACTION",
-        title=f"Harvest Actuals Recorded: {req.crop_name} ({req.season_year})",
-        description=f"Recorded actual harvest of {req.actual_yield} Q/acre (Predicted: {req.predicted_yield} Q/acre, Error: {err:.1f}%).",
+        title=f"Harvest Actuals Recorded: {crop} ({season_yr})",
+        description=f"Recorded actual harvest of {actual_y} Q/acre (Predicted: {pred_y} Q/acre, Error: {err:.1f}%).",
         severity="SUCCESS",
     )
     db.add(tl)

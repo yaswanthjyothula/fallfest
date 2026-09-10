@@ -555,15 +555,24 @@ class CopilotQueryResponse(BaseModel):
 
 
 class HarvestRecordCreate(BaseModel):
-    farm_id: int
+    farm_id: Optional[int] = None
     field_id: Optional[int] = None
-    season_year: str
-    crop_name: str
-    predicted_yield: float
-    actual_yield: float
+    season_year: Optional[str] = None
+    crop_name: Optional[str] = None
+    predicted_yield: Optional[float] = None
+    actual_yield: Optional[float] = None
     actual_nitrogen: Optional[float] = None
     actual_water_mm: Optional[float] = None
     notes: Optional[str] = None
+    season: Optional[str] = None
+    year: Optional[int] = None
+    crop: Optional[str] = None
+    crop_type: Optional[str] = None
+    predicted_yield_t_ha: Optional[float] = None
+    actual_yield_t_ha: Optional[float] = None
+    actual_nitrogen_kg_ha: Optional[float] = None
+    actual_irrigation_mm: Optional[float] = None
+    observed_condition: Optional[str] = None
 
 
 class HarvestRecordResponse(BaseModel):
@@ -1127,24 +1136,27 @@ class MandiPriceItem(BaseModel):
     market_name: str
     commodity: str
     variety: str
-    min_price_inr_q: float
-    modal_price_inr_q: float
-    max_price_inr_q: float
-    arrivals_tonnes: float
+    min_price_inr_quintal: float
+    modal_price_inr_quintal: float
+    max_price_inr_quintal: float
+    market_arrivals_tonnes: Optional[float] = None
     market_date: str
-    source: str = "AGMARKNET / e-NAM"
+    source: str = "AGMARKNET / e-NAM Daily Market Bulletin"
+    retrieved_at_ist: Optional[str] = None
     freshness_badge: str = "DAILY MARKET DATA"
 
 
 class MandiPricesResponse(BaseModel):
-    query_crop: str
-    state: str
-    district: Optional[str] = None
-    market_count: int
-    items: List[MandiPriceItem]
+    status: str = "Available"
+    state_filtered: Optional[str] = None
+    district_filtered: Optional[str] = None
+    crop_filtered: Optional[str] = None
+    market_date: str
     retrieved_at_ist: str
-    source: str = "Directorate of Marketing & Inspection (DMI) / AGMARKNET"
     freshness_badge: str = "DAILY MARKET DATA"
+    source_authority: str = "AGMARKNET & e-NAM (Ministry of Agriculture & Farmers Welfare, GoI)"
+    total_records: int
+    prices: List[MandiPriceItem] = []
 
 
 class DataSourceManifestItem(BaseModel):
@@ -1161,6 +1173,7 @@ class DataSourceManifestItem(BaseModel):
 class DataSourcesManifestResponse(BaseModel):
     platform: str = "AgriQuantum Precision Agriculture Intelligence Platform"
     geographic_scope: str = "India (28 States, 8 Union Territories)"
-    authoritative_sources: Dict[str, DataSourceManifestItem]
-    last_verified: str
+    sources: Dict[str, Any] = {}
+    authoritative_sources: Optional[Dict[str, Any]] = None
+    last_verified: Optional[str] = "10 Sep 2026, 17:00 IST"
 

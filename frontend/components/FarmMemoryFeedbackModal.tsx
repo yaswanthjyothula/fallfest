@@ -74,10 +74,18 @@ export function FarmMemoryFeedbackModal({
     setSuccessMsg(null);
 
     const payload = {
+      farm_id: farmId,
+      season_year: `${season} ${year}`,
+      crop_name: crop,
+      predicted_yield: Number(latestPredictedYield) || 43.11,
+      actual_yield: Number(actualYield),
+      actual_nitrogen: actualN ? Number(actualN) : undefined,
+      actual_water_mm: actualIrrigation ? Number(actualIrrigation) : undefined,
+      notes: condition ? `Observed: ${condition}` : undefined,
       season,
       year: Number(year),
       crop,
-      predicted_yield_t_ha: Number(latestPredictedYield),
+      predicted_yield_t_ha: Number(latestPredictedYield) || 43.11,
       actual_yield_t_ha: Number(actualYield),
       actual_nitrogen_kg_ha: actualN ? Number(actualN) : undefined,
       actual_irrigation_mm: actualIrrigation ? Number(actualIrrigation) : undefined,
@@ -103,7 +111,7 @@ export function FarmMemoryFeedbackModal({
       setSuccessMsg("Harvest recorded! Farm memory & model calibration updated.");
       fetchHistory();
     } catch (err: any) {
-      console.error(err);
+      console.warn("Harvest actuals record notice:", err);
       offlineSync.queueItem("harvest_record", { ...payload, farm_id: farmId });
       setSuccessMsg("Recorded to offline field queue (Network error).");
     } finally {

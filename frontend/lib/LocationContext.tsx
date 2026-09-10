@@ -112,6 +112,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [lastKnownLocation, setLastKnownLocation] = useState<UserLocation | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [isWatching, setIsWatching] = useState<boolean>(false);
   const [permissionState, setPermissionState] = useState<"prompt" | "granted" | "denied" | "unknown">("unknown");
   const [isPromptOpen, setIsPromptOpen] = useState<boolean>(false);
@@ -119,6 +120,12 @@ export function LocationProvider({ children }: { children: ReactNode }) {
 
   const watchIdRef = useRef<number | null>(null);
   const lastDispatchedCoordsRef = useRef<{ lat: number; lon: number } | null>(null);
+  const userLocationRef = useRef<UserLocation | null>(null);
+  const lastTimestampUpdateRef = useRef<number>(0);
+
+  useEffect(() => {
+    userLocationRef.current = userLocation;
+  }, [userLocation]);
 
   // 1. Ticking timer to show relative update age ("Updated X seconds ago")
   useEffect(() => {
@@ -183,18 +190,20 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         lat,
         lon
       );
-      if (dist < 0.025 && userLocation) {
-        // Minor movement: update timestamp and accuracy without refetching geocode
-        setUserLocation((prev) =>
-          prev
-            ? { ...prev, accuracy, timestamp: now }
-            : null
-        );
-        setLocationStatus("live");
+      if (dist < 0.025 && userLocationRef.current) {
+        // Minor movement: throttle updates to at most once per 5 seconds to prevent re-render thrashing
+        if (now - lastTimestampUpdateRef.current > 5000) {
+          lastTimestampUpdateRef.current = now;
+          setUserLocation((prev) =>
+            prev ? { ...prev, accuracy, timestamp: now } : null
+          );
+          setLocationStatus("live");
+        }
         return;
       }
     }
 
+    lastTimestampUpdateRef.current = now;
     lastDispatchedCoordsRef.current = { lat, lon };
 
     // Resolve human-readable place without hardcoding any fallback city
@@ -216,9 +225,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
       formattedAddress: geo.formatted,
     };
 
+    userLocationRef.current = newLocation;
     setUserLocation(newLocation);
     setLastKnownLocation(newLocation);
     setLocationStatus("live");
+    setLocationError(null);
     setPermissionState("granted");
 
     try {
@@ -226,10 +237,11 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore
     }
-  }, [userLocation]);
+  }, []);
 
   const handlePositionError = useCallback((err: GeolocationPositionError) => {
     console.warn("Geolocation position watch error:", err.message);
+    setLocationError(err.message);
     if (err.code === err.PERMISSION_DENIED) {
       setLocationStatus("denied");
       setPermissionState("denied");
@@ -246,8 +258,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
     }
 
     if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
+      return; // Already actively subscribed
     }
 
     setLocationStatus("updating");
@@ -390,6 +401,7 @@ export function LocationProvider({ children }: { children: ReactNode }) {
         userLocation,
         lastKnownLocation,
         locationStatus,
+        locationError,
         isWatching,
         accuracy: userLocation?.accuracy,
         timestamp: userLocation?.timestamp,

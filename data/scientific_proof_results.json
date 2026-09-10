@@ -2,7 +2,7 @@
   "metadata": {
     "title": "AgriQuantum Classical vs Quantum Scientific Benchmark Suite",
     "version": "v2.4-calibrated",
-    "timestamp": "2026-09-09T09:28:55Z",
+    "timestamp": "2026-09-10T11:55:29Z",
     "environment": {
       "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
       "cores": 16,
@@ -12,7 +12,7 @@
       "qiskit_aer_version": "0.17.2",
       "os": "Windows 11"
     },
-    "execution_duration_sec": 3.21
+    "execution_duration_sec": 3.22
   },
   "experiment_a_baseline": {
     "models": [
@@ -26,7 +26,7 @@
         "mae": 2.873,
         "mape": 7.38,
         "train_time_sec": 0.084,
-        "inf_time_sec": 0.1112,
+        "inf_time_sec": 0.121,
         "rank": 4
       },
       {
@@ -38,8 +38,8 @@
         "rmse": 3.4622,
         "mae": 2.9626,
         "mape": 7.5,
-        "train_time_sec": 0.0667,
-        "inf_time_sec": 0.0041,
+        "train_time_sec": 0.075,
+        "inf_time_sec": 0.0045,
         "rank": 3
       },
       {
@@ -52,7 +52,7 @@
         "mae": 2.5672,
         "mape": 6.7,
         "train_time_sec": 0.0009,
-        "inf_time_sec": 0.0003,
+        "inf_time_sec": 0.0004,
         "rank": 2
       },
       {
@@ -64,7 +64,7 @@
         "rmse": 3.3462,
         "mae": 2.7512,
         "mape": 7.03,
-        "train_time_sec": 0.0007,
+        "train_time_sec": 0.0006,
         "inf_time_sec": 0.0001,
         "rank": 1
       }
@@ -77,7 +77,7 @@
         "mae": 2.873,
         "mape": 7.38,
         "train_time_sec": 0.084,
-        "inf_time_sec": 0.1112
+        "inf_time_sec": 0.121
       },
       "best_classical_model": {
         "name": "Ridge Regressor",
@@ -85,7 +85,7 @@
         "rmse": 3.3462,
         "mae": 2.7512,
         "mape": 7.03,
-        "train_time_sec": 0.0007,
+        "train_time_sec": 0.0006,
         "inf_time_sec": 0.0001
       },
       "r2_delta": -0.0699,

@@ -29,7 +29,7 @@ interface DataSourceCard {
   category: "weather" | "yield" | "market" | "satellite" | "mosdac";
   title: string;
   authority: string;
-  ministry: string;
+  ministry?: string;
   portalUrl: string;
   dataType: string;
   freshnessBadge: string;
@@ -120,6 +120,7 @@ const SOURCES: DataSourceCard[] = [
     category: "satellite",
     title: "Copernicus Sentinel-2 Multispectral Earth Observation",
     authority: "European Space Agency (ESA) & European Commission",
+    ministry: "European Union Earth Observation Programme",
     portalUrl: "https://dataspace.copernicus.eu",
     dataType: "10m Multispectral Surface Reflectance (Level-2A)",
     freshnessBadge: "LATEST OBSERVATION",
@@ -218,7 +219,7 @@ export default function DataSourcesPage() {
     const matchesSearch =
       s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.authority.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.ministry.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (s.ministry?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
       s.metrics.some((m) => m.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });

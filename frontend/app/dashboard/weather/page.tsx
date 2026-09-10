@@ -36,6 +36,7 @@ import {
   HelpCircle,
   Radio,
   Clock,
+  BarChart3,
 } from "lucide-react";
 import {
   api,

@@ -29,10 +29,22 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimitMiddleware, max_requests=150, window_seconds=60)
 
 # 2. Configure CORS
-allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+env_origins = os.getenv("CORS_ORIGINS")
+if env_origins:
+    for o in env_origins.split(","):
+        if o.strip() and o.strip() not in allowed_origins:
+            allowed_origins.append(o.strip())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
